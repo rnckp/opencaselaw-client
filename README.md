@@ -1,6 +1,6 @@
 # OpenCaseLaw Python Client
 
-**Independent Python client for accessing the public no-key [OpenCaseLaw](https://opencaselaw.ch) REST API more easily.**
+**Python client for accessing the public no-key [OpenCaseLaw](https://opencaselaw.ch) REST API more easily.**
 
 This project is not official, associated with, or affiliated with OpenCaseLaw. It was developed independently as a convenience wrapper around the publicly documented OpenCaseLaw API.
 
