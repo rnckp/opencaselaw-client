@@ -412,3 +412,23 @@ def test_http_errors_propagate_without_retry(status: int) -> None:
 def test_empty_base_url_is_not_silently_replaced() -> None:
     with pytest.raises(ValueError, match="base_url"):
         OpenCaseLawClient(base_url="")
+
+
+def test_find_relevant_erwaegung_timeout_applies_only_to_that_call() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return _json_response({"paragraphs": []})
+
+    with _client_with_handler(httpx.MockTransport(handler)) as client:
+        result = client.find_relevant_erwaegung(
+            "bger_1", claim="A claim", max_paragraphs=3, request_timeout=120.0
+        )
+        client.find_relevant_erwaegung("bger_1", claim="A claim")
+
+    assert result == {"paragraphs": []}
+    assert seen[0].url.path == "/api/relevant-erwaegung/bger_1"
+    assert dict(seen[0].url.params) == {"claim": "A claim", "max_paragraphs": "3"}
+    assert seen[0].extensions["timeout"]["read"] == 120.0
+    assert seen[1].extensions["timeout"]["read"] == 30.0

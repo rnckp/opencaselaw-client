@@ -124,6 +124,7 @@ relevant = client.find_relevant_erwaegung(
     "bger_4A_747_2012",
     claim="The decision supports this legal proposition.",
     max_paragraphs=5,
+    request_timeout=120.0,  # optional extra time for this endpoint
 )
 ```
 

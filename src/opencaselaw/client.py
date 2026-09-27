@@ -591,11 +591,14 @@ class OpenCaseLawClient:
         decision_id: str,
         claim: str,
         max_paragraphs: int | None = None,
+        *,
+        request_timeout: float | None = None,
     ) -> dict[str, Any]:
         """Find Erwägungen matching a legal claim."""
         return self._get_json(
             f"/relevant-erwaegung/{_quote_segment(decision_id)}",
             params=_params(claim=claim, max_paragraphs=max_paragraphs),
+            timeout=request_timeout,
         )
 
     # Materialien v2-style helpers from the public spec
