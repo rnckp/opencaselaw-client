@@ -1,0 +1,1581 @@
+{
+  "source": "https://mcp.opencaselaw.ch/api/openapi.json",
+  "checked_on": "2026-09-27",
+  "sha256": "93f69d4aa317dfe3402464bec42f0a93d4b3d08e3ea262359b7f7d750bdba5ce",
+  "operations": [
+    {
+      "path": "/lookup",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 25,
+            "minimum": 1,
+            "default": 8
+          }
+        },
+        {
+          "name": "exact",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    {
+      "path": "/tool/{name}",
+      "method": "POST",
+      "parameters": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/tool",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/decisions",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "court",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "chamber",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "marked_for_publication",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 2000,
+            "minimum": 1,
+            "default": 50
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "fields",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "full"
+          }
+        },
+        {
+          "name": "include_pinpoint",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      ]
+    },
+    {
+      "path": "/decisions/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "full_text",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      ]
+    },
+    {
+      "path": "/courts",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/integrity/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scraper-health",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/statistics",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "court",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/citations/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "direction",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "both"
+          }
+        },
+        {
+          "name": "min_confidence",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "default": 0.3
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 200,
+            "minimum": 1,
+            "default": 50
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      ]
+    },
+    {
+      "path": "/appeal-chain/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "min_confidence",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0,
+            "default": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "path": "/leading-cases",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "law_code",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "court",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20
+          }
+        },
+        {
+          "name": "include_pinpoint",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      ]
+    },
+    {
+      "path": "/trends",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "law_code",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "court",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/mock-decision",
+      "method": "POST",
+      "parameters": []
+    },
+    {
+      "path": "/laws/search",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sr_number",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "jurisdiction",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "all"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 10
+          }
+        }
+      ]
+    },
+    {
+      "path": "/laws/{abbreviation}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "abbreviation",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sr_number",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "de"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "CH"
+          }
+        },
+        {
+          "name": "as_of",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "json"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/laws/{abbreviation}/{canton}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "abbreviation",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "de"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/amendment-ref",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "ref_type",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/commentaries/search",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "abbreviation",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 10
+          }
+        }
+      ]
+    },
+    {
+      "path": "/commentaries/{abbreviation}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "abbreviation",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sr_number",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "de"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scholarship/search",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "source",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pub_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "year_min",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "year_max",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "author",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 10
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scholarship/sources",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/scholarship/licenses",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/scholarship/citation-stats",
+      "method": "GET",
+      "parameters": []
+    },
+    {
+      "path": "/scholarship/cited-by-statute",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "sr_number",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scholarship/cited-by-decision",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scholarship-fulltext",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "pub_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/scholarship/{pub_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "pub_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/materialien/{law_code}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "law_code",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/materialien",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "law_code",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 10
+          }
+        }
+      ]
+    },
+    {
+      "path": "/legislation/search",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 60,
+            "minimum": 1,
+            "default": 20
+          }
+        },
+        {
+          "name": "active_only",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        {
+          "name": "search_in_content",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        {
+          "name": "fetch_top_n_texts",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10,
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      ]
+    },
+    {
+      "path": "/legislation/changes",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "CH"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/legislation/{lexfind_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "lexfind_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "systematic_number",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "canton",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "CH"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "de"
+          }
+        },
+        {
+          "name": "include_versions",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      ]
+    },
+    {
+      "path": "/doctrine",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/case-brief/{case}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "case",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/cite",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "reference",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pinpoint",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "de"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/attest",
+      "method": "POST",
+      "parameters": []
+    },
+    {
+      "path": "/verify-claim",
+      "method": "POST",
+      "parameters": []
+    },
+    {
+      "path": "/decisions/{decision_id}/export.docx",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/decisions/{decision_id}/export.pdf",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/decisions/{decision_id}/export.bib",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/decisions/{decision_id}/export.ris",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/atom/{court}.xml",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "court",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/erwaegung/{decision_id}/{e_number}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "e_number",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/relevant-erwaegung/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "claim",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "top_k",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 10,
+            "minimum": 1,
+            "default": 3
+          }
+        }
+      ]
+    },
+    {
+      "path": "/article-purpose/{sr_number}/{article}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "sr_number",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(de|fr|it)$",
+            "default": "de"
+          }
+        },
+        {
+          "name": "max_paragraphs",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 20,
+            "minimum": 1,
+            "default": 8
+          }
+        }
+      ]
+    },
+    {
+      "path": "/search-botschaft",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "query",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "q",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(de|fr|it)$"
+          }
+        },
+        {
+          "name": "year_min",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "year_max",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 50,
+            "minimum": 1,
+            "default": 20
+          }
+        }
+      ]
+    },
+    {
+      "path": "/article-history/{sr_number}/{article}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "sr_number",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "article",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "language",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(de|fr|it)$",
+            "default": "de"
+          }
+        },
+        {
+          "name": "leading_cases_limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 15,
+            "minimum": 1,
+            "default": 5
+          }
+        }
+      ]
+    },
+    {
+      "path": "/regeste/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/structure/{decision_id}",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "decision_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "paragraph_excerpt_chars",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 5000,
+            "minimum": 50,
+            "default": 250
+          }
+        }
+      ]
+    },
+    {
+      "path": "/exam-question",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "topic",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "exclude_ids",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    }
+  ]
+}

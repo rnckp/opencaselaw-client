@@ -46,6 +46,10 @@ with OpenCaseLawClient() as client:
 
 ## API Reference
 
+Reviewed on 2026-09-27 against the deployed [application OpenAPI](https://mcp.opencaselaw.ch/api/openapi.json), [typed research OpenAPI](https://mcp.opencaselaw.ch/api/research/openapi.json), and the [official Python CLI source](https://github.com/jonashertner/opencaselaw/tree/05a6dcd1f7c24ba4091d8ae254dc7975e1589db6/clients/python). See [the endpoint audit](docs/api-compatibility.md) for the complete route/parameter inventory and limits.
+
+The official [CLI](https://opencaselaw.ch/cli/) also implements offline checks, citation resolution workflows, and evidence bundles. Those are CLI features, not REST endpoints implemented by this package.
+
 ### Decisions
 
 ```python
@@ -57,18 +61,33 @@ results = client.search_decisions(
     date_from="2020-01-01",
     date_to="2024-12-31",
     chamber="I",  # optional chamber substring
-    decision_type="Urteil",
     limit=20,
     offset=0,
     sort="date_desc",  # "relevance", "date_desc", "date_asc"
     fields="compact",  # "full" or "compact"
+    include_pinpoint=False,  # skip extra passage lookups
+    marked_for_publication=None,  # True: BGer rulings marked for the BGE collection
     request_timeout=60.0,  # optional per-call timeout for slow broad searches
 )
 
 decision = client.get_decision("bger_4A_747_2012", full_text=True)
 ```
 
-`search_decisions()` returns a `DecisionSearchResult` with `DecisionSummary` items. `get_decision()` returns a `Decision`.
+`search_decisions()` returns a `DecisionSearchResult` with `DecisionSummary` items. `get_decision()` returns a `Decision`. Search accepts `q` as an alias; a non-empty `query` takes precedence. Read `total_is_lower_bound`, `degraded`, and `note` before interpreting the result. Page using the returned `next_offset` while `has_more` is true; the requested `limit` may differ from the returned count. A finished relevance search does not prove corpus completeness. Absent continuation/uncertainty metadata stays `None` for older servers.
+
+`decision_type` is no longer supported by the REST API and now raises `ValueError`; express that concept in `query`, or use `court`/`chamber`. `find_relevant_erwaegung()` sends `top_k`; the old `max_paragraphs` Python argument remains an alias.
+
+### Docket Lookup and Tool Discovery
+
+```python
+hits = client.lookup("BGE 140 III 86", exact=True, limit=5)
+catalog = client.list_tools()  # {"tools": [{"name": ..., "inputSchema": ...}, ...]}
+schema = client.get_openapi(research=True)
+# Inspect the tool's inputSchema before calling it:
+practice = client.call_tool("search_practice", {"query": "Mehrwertsteuer", "limit": 3})
+```
+
+Lookup `total` counts returned hits only (maximum 25); inspect all hits for ambiguity. `call_tool()` raises `OpenCaseLawToolError` for `_is_error: true` responses, retaining the server details in `.payload`. HTTP errors still raise `httpx.HTTPStatusError`.
 
 ### Courts, Statistics, and Health
 
@@ -90,6 +109,7 @@ citations = client.get_citations(
     direction="both",  # "both", "outgoing", "incoming"
     min_confidence=0.3,
     limit=50,
+    offset=0,  # follow returned next_offset and per-direction has_more flags
 )
 appeal_chain = client.get_appeal_chain("bger_4A_747_2012")
 leading = client.find_leading_cases(query="Mietrecht Kündigung", court="bger", limit=10)
@@ -123,12 +143,19 @@ erwaegung = client.get_erwaegung("bger_4A_747_2012", "2.3")
 relevant = client.find_relevant_erwaegung(
     "bger_4A_747_2012",
     claim="The decision supports this legal proposition.",
-    max_paragraphs=5,
+    top_k=5,
     request_timeout=120.0,  # optional extra time for this endpoint
 )
 ```
 
 ### Statutes
+
+```python
+cantonal_law = client.get_cantonal_law("StG", "ZH", article="12")
+xml = client.get_law_xml("OR", article="41", language="de")
+```
+
+`get_law()` retains its JSON/model return type; `get_law_xml()` requests `format=xml` and returns text. XML may be unavailable (HTTP 404). Article text can be missing or empty in tables of contents and historical editions; inspect `text_status` and use `law.articles or []` when iterating. `get_commentary()` now accepts `canton`.
 
 ```python
 law = client.get_law("OR", article="41", language="de")
@@ -236,6 +263,22 @@ client = OpenCaseLawClient(timeout=10.0, rate_limit_delay=0.5)
 ```
 
 The default `rate_limit_delay` is `0.2` seconds, matching the public guidance of at most five requests per second per IP.
+
+### Scholarship
+
+```python
+sources = client.list_scholarship_sources()
+licenses = client.get_scholarship_licenses()
+hits = client.search_scholarship("Mietrecht", year_min=2020, sort="year", limit=5)
+statute_links = client.find_scholarship_citing_statute("220", article="41", limit=5)
+decision_links = client.find_scholarship_citing_decision("bge_BGE_140_III_86", limit=5)
+stats = client.get_scholarship_citation_stats()
+# Use a pub_id returned by search:
+# publication = client.get_scholarship(pub_id)
+# full_text = client.get_scholarship_full_text(pub_id, request_timeout=120.0)
+```
+
+Scholarship search also accepts `q`, `source`, `pub_type`, `language`, `year_max`, and `author`. A filter-only bibliographic browse does not need a topic query. Preserve `attributions`, `license_usage`, and source-specific license terms when reusing results. Botschaft search now accepts `year_min` and `year_max`. Search methods for laws, commentaries, materials, legislation, and Botschaften also accept `q`.
 
 ### Typed Models
 

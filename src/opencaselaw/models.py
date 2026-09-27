@@ -20,6 +20,7 @@ class _ResponseModel(BaseModel):
     """Validate known fields while retaining the original response payload."""
 
     model_config = ConfigDict(frozen=True, extra="ignore", hide_input_in_errors=True)
+    ignored_arguments: list[str] | None = None
     raw: dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @model_validator(mode="wrap")
@@ -47,6 +48,19 @@ class DecisionSummary(_ResponseModel):
     """A compact decision returned by the search endpoint."""
 
     decision_id: RequiredString
+    docket_number: str | None = None
+    canton: str | None = None
+    publication_date: str | None = None
+    date_is_estimated: bool | None = Field(default=None, strict=True)
+    source_url: str | None = None
+    pdf_url: str | None = None
+    snippet: str | None = None
+    pinpoint: dict[str, Any] | None = None
+    citation_count: NonNegativeInt | None = None
+    is_leading_case: bool | None = Field(default=None, strict=True)
+    joined_dockets: list[str] | None = None
+    canonical_decision_id: str | None = None
+    is_canonical: bool | None = Field(default=None, strict=True)
     court: str | None = None
     decision_date: str | None = None
     language: str | None = None
@@ -66,6 +80,15 @@ class DecisionSearchResult(_ResponseModel):
     results: list[DecisionSummary] = Field(default_factory=list)
     limit: NonNegativeInt = 0
     offset: NonNegativeInt = 0
+    total_is_lower_bound: bool | None = Field(default=None, strict=True)
+    returned: NonNegativeInt | None = None
+    has_more: bool | None = Field(default=None, strict=True)
+    next_offset: NonNegativeInt | None = None
+    result_set_id: str | None = None
+    query_condensed: bool | None = Field(default=None, strict=True)
+    condensed_terms: list[str] | None = None
+    note: str | None = None
+    degraded: bool | None = Field(default=None, strict=True)
 
     @model_validator(mode="before")
     @classmethod
@@ -79,8 +102,12 @@ class DecisionSearchResult(_ResponseModel):
 class Decision(DecisionSummary):
     """A full decision response."""
 
-    docket_number: str | None = None
     full_text: str | None = None
+    full_text_total_chars: NonNegativeInt | None = None
+    full_text_returned_chars: NonNegativeInt | None = None
+    full_text_truncated: bool | None = Field(default=None, strict=True)
+    full_text_url: str | None = None
+    recency_note: str | None = None
 
 
 class LawArticle(_ResponseModel):
@@ -88,7 +115,11 @@ class LawArticle(_ResponseModel):
 
     article_num: RequiredString
     heading: str | None = None
-    text: RequiredString
+    text: str | None = None
+    text_status: str | None = None
+    xml: str | None = None
+    section: str | None = None
+    section_heading: str | None = None
 
 
 class Law(_ResponseModel):
@@ -99,7 +130,17 @@ class Law(_ResponseModel):
     title: str | None = None
     consolidation_date: str | None = None
     language: str | None = None
-    articles: list[LawArticle] = Field(default_factory=list)
+    articles: list[LawArticle] | None = Field(default_factory=list)
+    canton: str | None = None
+    level: str | None = None
+    snapshot_date: str | None = None
+    version: str | None = None
+    as_of: str | None = None
+    text_status: str | None = None
+    source_url: str | None = None
+    source_label: str | None = None
+    text_source: str | None = None
+    pending_changes: list[dict[str, Any]] | None = None
 
 
 class Court(_ResponseModel):
@@ -122,3 +163,10 @@ class Citation(_ResponseModel):
     canonical_url: str | None = None
     rule_statement: str | None = None
     exists: bool | None = Field(default=None, strict=True)
+    queried: str | None = None
+    resolved_id: str | None = None
+    citation_string: str | None = None
+    close_matches: list[DecisionSummary] | None = None
+    joined_dockets: list[str] | None = None
+    canonical_decision_id: str | None = None
+    is_canonical: bool | None = Field(default=None, strict=True)

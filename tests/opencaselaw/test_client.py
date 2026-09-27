@@ -47,7 +47,6 @@ def test_search_decisions_builds_query_and_parses_result() -> None:
         date_from="2010-01-01",
         date_to="2020-01-01",
         chamber="I",
-        decision_type="Urteil",
         limit=5,
         offset=10,
         sort="date_desc",
@@ -429,6 +428,6 @@ def test_find_relevant_erwaegung_timeout_applies_only_to_that_call() -> None:
 
     assert result == {"paragraphs": []}
     assert seen[0].url.path == "/api/relevant-erwaegung/bger_1"
-    assert dict(seen[0].url.params) == {"claim": "A claim", "max_paragraphs": "3"}
+    assert dict(seen[0].url.params) == {"claim": "A claim", "top_k": "3"}
     assert seen[0].extensions["timeout"]["read"] == 120.0
     assert seen[1].extensions["timeout"]["read"] == 30.0

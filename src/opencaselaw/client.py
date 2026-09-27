@@ -26,6 +26,15 @@ def _params(**values: Any) -> dict[str, Any]:
     return {key: value for key, value in values.items() if value is not None}
 
 
+class OpenCaseLawToolError(RuntimeError):
+    """A research tool reported failure inside an HTTP 200 response."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        """Keep the server payload available for explicit inspection."""
+        super().__init__("OpenCaseLaw research tool reported an error")
+        self.payload = payload
+
+
 class OpenCaseLawClient:
     """Client for the public no-key OpenCaseLaw API."""
 
@@ -161,20 +170,31 @@ class OpenCaseLawClient:
         sort: str | None = None,
         fields: str | None = None,
         *,
+        q: str | None = None,
+        marked_for_publication: bool | None = None,
+        include_pinpoint: bool | None = None,
         request_timeout: float | None = None,
     ) -> DecisionSearchResult:
-        """Search court decisions."""
+        """Search decisions; follow server continuation and lower-bound metadata.
+
+        ``query`` takes precedence over ``q`` on the server. The obsolete
+        ``decision_type`` filter is rejected rather than silently ignored.
+        """
+        if decision_type is not None:
+            raise ValueError("decision_type is no longer supported by the REST API")
         data = self._get_json(
             "/decisions",
             params=_params(
                 query=query,
+                q=q,
+                marked_for_publication=marked_for_publication,
+                include_pinpoint=include_pinpoint,
                 court=court,
                 canton=canton,
                 language=language,
                 date_from=date_from,
                 date_to=date_to,
                 chamber=chamber,
-                decision_type=decision_type,
                 limit=self._limit(limit),
                 offset=offset,
                 sort=sort,
@@ -233,6 +253,8 @@ class OpenCaseLawClient:
         direction: str | None = None,
         min_confidence: float | None = None,
         limit: int | None = None,
+        *,
+        offset: int | None = None,
     ) -> dict[str, Any]:
         """Find citations for a decision."""
         return self._get_json(
@@ -241,6 +263,7 @@ class OpenCaseLawClient:
                 direction=direction,
                 min_confidence=min_confidence,
                 limit=self._limit(limit),
+                offset=offset,
             ),
         )
 
@@ -264,6 +287,8 @@ class OpenCaseLawClient:
         date_from: str | None = None,
         date_to: str | None = None,
         limit: int | None = None,
+        *,
+        include_pinpoint: bool | None = None,
     ) -> dict[str, Any]:
         """Find highly cited decisions for a topic or statute."""
         return self._get_json(
@@ -276,6 +301,7 @@ class OpenCaseLawClient:
                 date_from=date_from,
                 date_to=date_to,
                 limit=self._limit(limit),
+                include_pinpoint=include_pinpoint,
             ),
         )
 
@@ -305,18 +331,21 @@ class OpenCaseLawClient:
 
     def search_laws(
         self,
-        query: str,
+        query: str | None = None,
         sr_number: str | None = None,
         canton: str | None = None,
         jurisdiction: str | None = None,
         language: str | None = None,
         limit: int | None = None,
+        *,
+        q: str | None = None,
     ) -> dict[str, Any]:
         """Search Swiss statute articles."""
         return self._get_json(
             "/laws/search",
             params=_params(
                 query=query,
+                q=q,
                 sr_number=sr_number,
                 canton=canton,
                 jurisdiction=jurisdiction,
@@ -356,16 +385,19 @@ class OpenCaseLawClient:
 
     def search_commentaries(
         self,
-        query: str,
+        query: str | None = None,
         abbreviation: str | None = None,
         language: str | None = None,
         limit: int | None = None,
+        *,
+        q: str | None = None,
     ) -> dict[str, Any]:
         """Search scholarly commentaries."""
         return self._get_json(
             "/commentaries/search",
             params=_params(
                 query=query,
+                q=q,
                 abbreviation=abbreviation,
                 language=language,
                 limit=self._limit(limit),
@@ -378,23 +410,27 @@ class OpenCaseLawClient:
         sr_number: str | None = None,
         article: str | None = None,
         language: str | None = None,
+        *,
+        canton: str | None = None,
     ) -> dict[str, Any]:
         """Get commentary for a law article."""
         return self._get_json(
             f"/commentaries/{_quote_segment(abbreviation)}",
-            params=_params(sr_number=sr_number, article=article, language=language),
+            params=_params(sr_number=sr_number, article=article, language=language, canton=canton),
         )
 
     def search_materialien(
         self,
-        query: str,
+        query: str | None = None,
         law_code: str | None = None,
         limit: int | None = None,
+        *,
+        q: str | None = None,
     ) -> dict[str, Any]:
         """Search preparatory materials."""
         return self._get_json(
             "/materialien",
-            params=_params(query=query, law_code=law_code, limit=self._limit(limit)),
+            params=_params(query=query, q=q, law_code=law_code, limit=self._limit(limit)),
         )
 
     def get_materialien(
@@ -410,19 +446,22 @@ class OpenCaseLawClient:
 
     def search_legislation(
         self,
-        query: str,
+        query: str | None = None,
         canton: str | None = None,
         language: str | None = None,
         limit: int | None = None,
         active_only: bool | None = None,
         search_in_content: bool | None = None,
         fetch_top_n_texts: int | None = None,
+        *,
+        q: str | None = None,
     ) -> dict[str, Any]:
         """Search Swiss legislation."""
         return self._get_json(
             "/legislation/search",
             params=_params(
                 query=query,
+                q=q,
                 canton=canton,
                 language=language,
                 limit=self._limit(limit),
@@ -592,12 +631,19 @@ class OpenCaseLawClient:
         claim: str,
         max_paragraphs: int | None = None,
         *,
+        top_k: int | None = None,
         request_timeout: float | None = None,
     ) -> dict[str, Any]:
-        """Find Erwägungen matching a legal claim."""
+        """Find matching Erwägungen using ``top_k`` (1-10).
+
+        ``max_paragraphs`` remains a compatibility alias for ``top_k``.
+        """
+        if top_k is not None and max_paragraphs is not None and top_k != max_paragraphs:
+            raise ValueError("top_k and max_paragraphs must agree when both are supplied")
+        top_k = top_k if top_k is not None else max_paragraphs
         return self._get_json(
             f"/relevant-erwaegung/{_quote_segment(decision_id)}",
-            params=_params(claim=claim, max_paragraphs=max_paragraphs),
+            params=_params(claim=claim, top_k=top_k),
             timeout=request_timeout,
         )
 
@@ -618,14 +664,25 @@ class OpenCaseLawClient:
 
     def search_botschaft(
         self,
-        query: str,
+        query: str | None = None,
         language: str | None = None,
         limit: int | None = None,
+        *,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        q: str | None = None,
     ) -> dict[str, Any]:
         """Search the verbatim Botschaft corpus."""
         return self._get_json(
             "/search-botschaft",
-            params=_params(query=query, language=language, limit=self._limit(limit)),
+            params=_params(
+                query=query,
+                q=q,
+                language=language,
+                year_min=year_min,
+                year_max=year_max,
+                limit=self._limit(limit),
+            ),
         )
 
     def get_article_history(
@@ -665,3 +722,158 @@ class OpenCaseLawClient:
     def atom_feed(self, court: str) -> str:
         """Get the Atom feed for a court."""
         return self._get_text(f"/atom/{_quote_segment(court)}.xml")
+
+    # Current research discovery and lookup
+
+    def get_openapi(self, *, research: bool = False) -> dict[str, Any]:
+        """Read the application schema or the typed public research subset."""
+        return self._get_json("/research/openapi.json" if research else "/openapi.json")
+
+    def lookup(
+        self,
+        q: str | None = None,
+        *,
+        query: str | None = None,
+        limit: int | None = None,
+        exact: bool | None = None,
+    ) -> dict[str, Any]:
+        """Look up a docket or BGE label; multiple hits can be ambiguous.
+
+        The server caps results at 25; ``total`` counts returned hits only.
+        """
+        return self._get_json(
+            "/lookup", params=_params(q=q, query=query, limit=self._limit(limit), exact=exact)
+        )
+
+    def list_tools(self) -> dict[str, Any]:
+        """Read the research tool catalog, including each tool's inputSchema."""
+        return self._get_json("/tool")
+
+    def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        *,
+        request_timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Call a research tool with arguments from its discovered inputSchema.
+
+        Raises:
+            OpenCaseLawToolError: The server marks the HTTP 200 payload as an error.
+            httpx.HTTPStatusError: The HTTP request fails (including 404 or 422).
+        """
+        data = self._post_json(
+            f"/tool/{_quote_segment(name)}",
+            json_data={} if arguments is None else arguments,
+            timeout=request_timeout,
+        )
+        if data.get("_is_error") is True:
+            raise OpenCaseLawToolError(data)
+        return data
+
+    def get_cantonal_law(
+        self,
+        abbreviation: str,
+        canton: str,
+        *,
+        article: str | None = None,
+        language: str | None = None,
+    ) -> Law:
+        """Look up a cantonal law through the dedicated two-segment route."""
+        data = self._get_json(
+            f"/laws/{_quote_segment(abbreviation)}/{_quote_segment(canton)}",
+            params=_params(article=article, language=language),
+        )
+        return Law.from_json(data)
+
+    def get_law_xml(
+        self,
+        abbreviation: str,
+        article: str,
+        *,
+        sr_number: str | None = None,
+        language: str | None = None,
+        as_of: str | None = None,
+    ) -> str:
+        """Return the verbatim Akoma Ntoso XML for a single federal article."""
+        return self._get_text(
+            f"/laws/{_quote_segment(abbreviation)}",
+            params=_params(
+                article=article, sr_number=sr_number, language=language, as_of=as_of, format="xml"
+            ),
+        )
+
+    # Open-access scholarship
+
+    def search_scholarship(
+        self,
+        query: str | None = None,
+        *,
+        q: str | None = None,
+        source: str | None = None,
+        pub_type: str | None = None,
+        language: str | None = None,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        author: str | None = None,
+        sort: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Search publications by topic, author, source, language, type, or year."""
+        return self._get_json(
+            "/scholarship/search",
+            params=_params(
+                query=query,
+                q=q,
+                source=source,
+                pub_type=pub_type,
+                language=language,
+                year_min=year_min,
+                year_max=year_max,
+                author=author,
+                sort=sort,
+                limit=self._limit(limit),
+            ),
+        )
+
+    def list_scholarship_sources(self) -> dict[str, Any]:
+        """List publication sources and their coverage."""
+        return self._get_json("/scholarship/sources")
+
+    def get_scholarship_licenses(self) -> dict[str, Any]:
+        """Read publication license information before reusing content."""
+        return self._get_json("/scholarship/licenses")
+
+    def get_scholarship_citation_stats(self) -> dict[str, Any]:
+        """Read aggregate scholarship citation counts."""
+        return self._get_json("/scholarship/citation-stats")
+
+    def find_scholarship_citing_statute(
+        self, sr_number: str, article: str | None = None, *, limit: int | None = None
+    ) -> dict[str, Any]:
+        """Find publications citing a statute article."""
+        return self._get_json(
+            "/scholarship/cited-by-statute",
+            params=_params(sr_number=sr_number, article=article, limit=self._limit(limit)),
+        )
+
+    def find_scholarship_citing_decision(
+        self, decision_id: str, *, limit: int | None = None
+    ) -> dict[str, Any]:
+        """Find publications citing a decision."""
+        return self._get_json(
+            "/scholarship/cited-by-decision",
+            params=_params(decision_id=decision_id, limit=self._limit(limit)),
+        )
+
+    def get_scholarship(self, pub_id: str) -> dict[str, Any]:
+        """Fetch metadata for a publication by its canonical pub_id."""
+        return self._get_json(f"/scholarship/{_quote_segment(pub_id)}")
+
+    def get_scholarship_full_text(
+        self, pub_id: str, *, request_timeout: float | None = None
+    ) -> dict[str, Any]:
+        """Fetch publication full text on demand; availability and licenses vary."""
+        return self._get_json(
+            "/scholarship-fulltext", params=_params(pub_id=pub_id), timeout=request_timeout
+        )

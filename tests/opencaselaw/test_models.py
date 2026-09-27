@@ -127,7 +127,7 @@ def test_court_and_citation_parse_optional_fields() -> None:
     [
         (DecisionSummary, {}, "decision_id"),
         (Decision, {"decision_id": None}, "decision_id"),
-        (LawArticle, {"article_num": "41"}, "text"),
+        (LawArticle, {"text": "Text"}, "article_num"),
         (Court, {}, "court"),
     ],
 )
@@ -146,7 +146,7 @@ def test_search_rejects_malformed_results(value: object) -> None:
         DecisionSearchResult.from_json({"results": value})
 
 
-@pytest.mark.parametrize("value", [None, "bad", {}, ["bad"]])
+@pytest.mark.parametrize("value", ["bad", {}, ["bad"]])
 def test_law_rejects_malformed_articles(value: object) -> None:
     with pytest.raises(ValueError):
         Law.from_json({"articles": value})
