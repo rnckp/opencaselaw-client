@@ -43,7 +43,7 @@ Briefly report any conflict, the rule applied, and its effect.
 - Preserve `[tool.uv] exclude-newer = "7 days"` so newly published packages observe the supply-chain cooldown.
 - For new projects, use `src/<project_name>/` with mirrored tests under `tests/`; preserve existing layouts unless migration is in scope. Separate unit and integration tests when useful.
 - Preferred packages are not available until declared. Obtain approval before `uv add`.
-- Install repository hooks with `uv run pre-commit install` before the first commit.
+- If pre-commit is declared and configured, install repository hooks with `uv run pre-commit install` before the first commit. This repository currently has neither the dependency nor a hook configuration; obtain approval before adding them.
 
 ## Python Design and Style
 

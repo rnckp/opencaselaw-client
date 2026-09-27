@@ -6,7 +6,9 @@ This project is not official, associated with, or affiliated with OpenCaseLaw. I
 
 **Note:** The official [OpenCaseLaw website](https://opencaselaw.ch) and [API documentation](https://opencaselaw.ch/api) are the actual and authoritative reference for the API.
 
-## Installation
+## Installation from a checkout
+
+Requires Python 3.13 or newer and `uv`. Run from the repository root:
 
 ```bash
 uv sync
@@ -37,7 +39,8 @@ with OpenCaseLawClient() as client:
 
     # Look up a statute article
     law = client.get_law("OR", article="41", language="de")
-    print(law.articles[0].text)
+    for article in law.articles or []:
+        print(article.article_num, article.text, article.text_status)
 
     # Build a canonical citation
     citation = client.cite("BGE 140 III 86", pinpoint="2.3")
@@ -46,9 +49,9 @@ with OpenCaseLawClient() as client:
 
 ## API Reference
 
-Reviewed on 2026-09-27 against the deployed [application OpenAPI](https://mcp.opencaselaw.ch/api/openapi.json), [typed research OpenAPI](https://mcp.opencaselaw.ch/api/research/openapi.json), and the [official Python CLI source](https://github.com/jonashertner/opencaselaw/tree/05a6dcd1f7c24ba4091d8ae254dc7975e1589db6/clients/python). See [the endpoint audit](docs/api-compatibility.md) for the complete route/parameter inventory and limits.
+The [compatibility reference](docs/api-compatibility.md) lists wrapper routes and parameters against the checked-in contract dated 2026-09-27, with verification limits. It does not establish current service availability or complete API coverage.
 
-The official [CLI](https://opencaselaw.ch/cli/) also implements offline checks, citation resolution workflows, and evidence bundles. Those are CLI features, not REST endpoints implemented by this package.
+The examples below assume an open `client` inside a `with OpenCaseLawClient() as client:` block, as in Quick Start. They make live requests; example IDs and references are illustrative and may not resolve.
 
 ### Decisions
 
@@ -73,9 +76,9 @@ results = client.search_decisions(
 decision = client.get_decision("bger_4A_747_2012", full_text=True)
 ```
 
-`search_decisions()` returns a `DecisionSearchResult` with `DecisionSummary` items. `get_decision()` returns a `Decision`. Search accepts `q` as an alias; a non-empty `query` takes precedence. Read `total_is_lower_bound`, `degraded`, and `note` before interpreting the result. Page using the returned `next_offset` while `has_more` is true; the requested `limit` may differ from the returned count. A finished relevance search does not prove corpus completeness. Absent continuation/uncertainty metadata stays `None` for older servers.
+`search_decisions()` returns a `DecisionSearchResult` with `DecisionSummary` items. `get_decision()` returns a `Decision`. Search accepts both `query` and `q` and forwards supplied values; the server decides precedence. Read `total_is_lower_bound`, `degraded`, and `note` before interpreting the result. Page only when `has_more` is true and `next_offset` is present; the requested `limit` may differ from the returned count. A finished relevance search does not prove corpus completeness. Absent continuation/uncertainty metadata stays `None`. If `total` or `limit` is omitted, the model defaults it to the number of returned records; that fallback is not a corpus count.
 
-`decision_type` is no longer supported by the REST API and now raises `ValueError`; express that concept in `query`, or use `court`/`chamber`. `find_relevant_erwaegung()` sends `top_k`; the old `max_paragraphs` Python argument remains an alias.
+Supplying `decision_type` raises `ValueError` locally; express that concept in `query`, or use `court`/`chamber`. `find_relevant_erwaegung()` sends `top_k`; the old `max_paragraphs` Python argument remains an alias.
 
 ### Docket Lookup and Tool Discovery
 
@@ -152,10 +155,11 @@ relevant = client.find_relevant_erwaegung(
 
 ```python
 cantonal_law = client.get_cantonal_law("StG", "ZH", article="12")
+print(cantonal_law.raw)  # Inspect error/candidates if the abbreviation does not resolve.
 xml = client.get_law_xml("OR", article="41", language="de")
 ```
 
-`get_law()` retains its JSON/model return type; `get_law_xml()` requests `format=xml` and returns text. XML may be unavailable (HTTP 404). Article text can be missing or empty in tables of contents and historical editions; inspect `text_status` and use `law.articles or []` when iterating. `get_commentary()` now accepts `canton`.
+`get_law()` returns a `Law`; `get_law_xml()` requests `format=xml` and returns text. HTTP failures, including unavailable XML (404), propagate. A successful HTTP response can still contain an application error: inspect `law.raw` for `error`, `note`, and `candidates`, especially for ambiguous cantonal abbreviations. Article text can be missing or empty in tables of contents and historical editions; inspect `text_status` and use `law.articles or []` when iterating. `get_commentary()` accepts `canton`.
 
 ```python
 law = client.get_law("OR", article="41", language="de")
@@ -170,7 +174,7 @@ search_hits = client.search_laws(
 amendment = client.resolve_amendment_ref(ref_type="BBl", year=2020, page=1)
 ```
 
-`get_law()` returns a `Law` with `LawArticle` items. `search_laws()` and `resolve_amendment_ref()` return raw dictionaries because the public OpenAPI response schemas are not fully typed.
+`get_law()` returns a `Law` with `LawArticle` items. `search_laws()` and `resolve_amendment_ref()` return raw dictionaries without validating their nested fields.
 
 ### Legislation
 
@@ -185,7 +189,7 @@ legislation_hits = client.search_legislation(
     fetch_top_n_texts=0,
 )
 legislation = client.get_legislation(
-    12345,
+    12345,  # placeholder: replace with a LexFind ID from a search result
     systematic_number=None,
     canton="CH",
     language="de",
@@ -227,7 +231,7 @@ mock = client.mock_decision(
 )
 ```
 
-`mock_decision()` is a slower research helper. It sends the provided facts and question to the public API and is not legal advice.
+`mock_decision()` may return clarification questions instead of an outline. It sends the provided facts and question to the public API and is not legal advice.
 
 ### Exports and Feeds
 
@@ -248,7 +252,7 @@ Path("decision.ris").write_text(ris, encoding="utf-8")
 
 ### Configuration
 
-Runtime defaults are loaded from `config.yaml` when present. Constructor arguments such as `base_url`, `timeout`, and `rate_limit_delay` override configured defaults. Search helpers use `default_limit` when their `limit` argument is omitted.
+Runtime defaults are loaded from `config.yaml` in the current working directory, or from the constructor's `config_path`. Missing files and empty YAML documents use package defaults. The settings can be top-level or nested under `opencaselaw`; unknown setting keys are rejected. Constructor arguments such as `base_url`, `timeout`, and `rate_limit_delay` override configured defaults. Every wrapper with a `limit` argument uses `default_limit` when it is omitted, including lookup, citations, and mock decisions.
 
 ```yaml
 opencaselaw:
@@ -259,10 +263,11 @@ opencaselaw:
 ```
 
 ```python
-client = OpenCaseLawClient(timeout=10.0, rate_limit_delay=0.5)
+with OpenCaseLawClient(timeout=10.0, rate_limit_delay=0.5) as client:
+    print(client.config)
 ```
 
-The default `rate_limit_delay` is `0.2` seconds, matching the public guidance of at most five requests per second per IP.
+The default delay is `0.2` seconds between request starts per client instance. It does not coordinate traffic across clients or processes. `request_timeout` overrides are available only on decision search, relevant-Erwägung search, mock decisions, tool calls, and scholarship full-text retrieval.
 
 ### Scholarship
 
@@ -278,7 +283,7 @@ stats = client.get_scholarship_citation_stats()
 # full_text = client.get_scholarship_full_text(pub_id, request_timeout=120.0)
 ```
 
-Scholarship search also accepts `q`, `source`, `pub_type`, `language`, `year_max`, and `author`. A filter-only bibliographic browse does not need a topic query. Preserve `attributions`, `license_usage`, and source-specific license terms when reusing results. Botschaft search now accepts `year_min` and `year_max`. Search methods for laws, commentaries, materials, legislation, and Botschaften also accept `q`.
+Scholarship search also accepts `q`, `source`, `pub_type`, `language`, `year_max`, and `author`. A filter-only bibliographic browse does not need a topic query. Preserve `attributions`, `license_usage`, and source-specific license terms when reusing results. Botschaft search accepts `year_min` and `year_max`. Search methods for laws, commentaries, materials, legislation, and Botschaften also accept `q`.
 
 ### Typed Models
 
@@ -294,15 +299,16 @@ from opencaselaw import (
 )
 ```
 
-The client uses frozen Pydantic models for stable high-use shapes and preserves the original payload, including unknown fields, in each model's `raw` attribute. Invalid known fields raise `pydantic.ValidationError` (a `ValueError` subclass), including malformed list entries; records are never silently dropped. `raw` and nested collections remain mutable. Models support keyword construction and `from_json()`; use `model_dump()` instead of dataclass utilities. Endpoints whose response schemas are not fully typed in the OpenAPI document return `dict[str, object]`-style dictionaries.
+The client uses frozen Pydantic models for stable high-use shapes and preserves the original payload, including unknown fields, in each model's `raw` attribute. Invalid known fields raise `pydantic.ValidationError` (a `ValueError` subclass), including malformed list entries; records are never silently dropped. `raw` and nested collections remain mutable. Models support keyword construction and `from_json()`; use `model_dump()` instead of dataclass utilities. Other JSON wrappers return dictionaries, except `list_courts()`, which also accepts arrays, and `list_court_models()`, which returns a list of `Court` models. Only `call_tool()` translates `_is_error: true` into a tool exception; HTTP-success error payloads from other routes are retained, including in model `raw` fields.
 
 ## Scope
 
-This package covers the public no-key routes documented on the OpenCaseLaw API page. License, payment, and private/admin routes that may appear in the raw OpenAPI schema are intentionally out of scope.
+This synchronous library wraps the routes listed in the [compatibility reference](docs/api-compatibility.md). It has no CLI, async client, or application server. License, payment, and private/admin routes that may appear in the raw OpenAPI schema are intentionally out of scope.
 
 Covered endpoint groups:
 
-- Decisions, courts, statistics, scraper health, and integrity proofs
+- Decisions, docket lookup, courts, statistics, scraper health, and integrity proofs
+- Scholarship, schema retrieval, and research tool discovery/calls
 - Citation graph, appeal chains, leading cases, trends, citation building, attestation, and claim verification
 - Decision structure, Regeste, Erwägungen, and relevant Erwägungen
 - Laws, legislation, commentaries, doctrine, materials, article purpose, Botschaft search, and article history
@@ -310,9 +316,7 @@ Covered endpoint groups:
 
 ## Data Sources
 
-OpenCaseLaw describes its public API as covering Swiss court decisions, statutes, commentaries, and citation graph data. The [public documentation](https://opencaselaw.ch/api/) currently references federal, cantonal, regulatory, statute, legislation, commentary, doctrine, materials, and export endpoints.
-
-For coverage details, use:
+The repository does not establish current corpus coverage. Query the service for reported coverage:
 
 ```python
 courts = client.list_courts()
@@ -337,7 +341,7 @@ uv run pytest -v
 uv build
 ```
 
-Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Python 3.13 and newer are supported. Tests use local mock transports and do not call the public API.
+Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Package metadata requires Python 3.13 or newer; there is no CI matrix verifying the supported range. Tests use local mock transports and do not call the public API; the demo notebook does. Weekly dependency updates are configured in `.github/dependabot.yml`, but no CI workflows or pre-commit hooks are configured. See [PLAN.md](PLAN.md) for follow-up work.
 
 Client instances are intended for sequential use. The delay is per client, not a shared per-IP limiter. HTTP errors and transport errors propagate to callers; retries are not automatic. Configuration rejects non-finite timing values, non-positive limits, and base URLs containing credentials, queries, or fragments.
 

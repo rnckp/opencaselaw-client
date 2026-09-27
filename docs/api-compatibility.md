@@ -1,25 +1,28 @@
-# Public API compatibility audit
+# Public API compatibility reference
 
-Checked on 2026-09-27 against the deployed [application schema](https://mcp.opencaselaw.ch/api/openapi.json), [typed research subset](https://mcp.opencaselaw.ch/api/research/openapi.json), and [tool catalog](https://mcp.opencaselaw.ch/api/tool). The [official Python client](https://github.com/jonashertner/opencaselaw/tree/05a6dcd1f7c24ba4091d8ae254dc7975e1589db6/clients/python) and server source were reviewed at commit `05a6dcd1f7c24ba4091d8ae254dc7975e1589db6`.
+## Evidence and verification limits
 
-The deployed schema governs the HTTP wrappers. The website lists mock decisions as GET, but the deployed schema and official route implementation use POST. The typed research schema is deployed and reachable; its availability notice on the website lags that deployment.
+This reference was checked against `src/opencaselaw/client.py`, its tests, and the [request-contract fixture](../tests/fixtures/public_api_contract.json). The fixture records an application-schema source URL, a check date of 2026-09-27, and a SHA-256 value. It contains selected methods, paths, and parameter schemas, but no response schemas or POST body schemas. The original schema is not stored, so its hash cannot be independently reproduced from this repository.
 
-## Changes and compatibility
+The previous audit cited the deployed application and typed research schemas, tool catalog, and upstream commit `05a6dcd1f7c24ba4091d8ae254dc7975e1589db6`. Those sources are not vendored here; current deployment behavior and upstream-source claims were not reverified in this repository-only review. Saved notebook outputs illustrate earlier responses, including failures; they are not repeatable service checks.
 
-- Added docket lookup, eight scholarship routes, tool discovery/calls, cantonal law paths, and federal article XML. `get_openapi()` also retrieves either schema.
-- Added search aliases (`q`), publication filtering, pinpoint control, citation offset, commentary canton, and Botschaft publication-year bounds.
-- Corrected relevant-Erwägung requests to send `top_k`. `max_paragraphs` remains a Python alias, with conflicting values rejected.
-- The server rejects `decision_type` and `legal_area` search filters. The existing Python `decision_type` parameter now raises locally. Use query terms or supported court/chamber filters.
-- Search models expose continuation, lower-bound, degraded-ranking, and query-condensation metadata. Missing metadata from older servers stays unknown (`None`). No automatic exhaustive-search claim or pagination is inferred.
-- Law article text can be absent, null, or empty; `articles` can be null. This is valid in the typed contract. Callers should inspect `text_status` and handle `articles or []`.
-- Tool failures marked `_is_error: true` raise `OpenCaseLawToolError`; its payload remains available for inspection. Other dictionary-returning routes retain their complete server payloads, including error/coverage/attribution fields.
+## Client compatibility behavior
+
+- `query` and `q` are forwarded when supplied; precedence is server-side.
+- `decision_type` is rejected locally. There is no `legal_area` argument.
+- Relevant-Erwägung requests send `top_k`; `max_paragraphs` remains a Python alias. Conflicting values raise `ValueError`.
+- Search models retain continuation, lower-bound, degraded-ranking, and query-condensation metadata. Missing optional metadata stays `None`. The client neither paginates automatically nor establishes exhaustive coverage.
+- `Law.articles` can be absent or null, and article text can be absent, null, or empty. Inspect `text_status` and iterate over `articles or []`.
+- Tool responses marked `_is_error: true` raise `OpenCaseLawToolError`, retaining `.payload`. Other HTTP-success error payloads are not automatically raised; dictionaries and model `raw` fields retain them.
 
 ## Endpoint inventory
 
-All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameters appear in braces. Query parameter limits are server contracts; this client generally leaves endpoint-specific validation to the server. The client uses its configured `default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each server default.
+All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameters appear in braces. Numeric bounds below come from the saved contract, not a fresh deployment check; this client generally leaves endpoint-specific validation to the server. The client uses its configured `default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each server default.
 
 | Method | Path | Query parameters | Numeric bounds |
 | --- | --- | --- | --- |
+| GET | `/openapi.json` | — | — |
+| GET | `/research/openapi.json` | — | — |
 | GET | `/lookup` | `q`, `query`, `limit`, `exact` | `limit`: 1–25 |
 | POST | `/tool/{name}` | — | — |
 | GET | `/tool` | — | — |
@@ -72,17 +75,19 @@ All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameter
 | GET | `/structure/{decision_id}` | `paragraph_excerpt_chars` | `paragraph_excerpt_chars`: 50–5000 |
 | GET | `/exam-question` | `topic`, `exclude_ids` | — |
 
+`get_openapi()` selects the application or research schema route. These two discovery routes are implemented and tested separately but are not included in the saved contract.
+
 ### JSON request bodies
+
+These fields are sent by the wrappers; required fields below are required Python arguments. The fixture does not validate body schemas.
 
 - `/mock-decision`: `facts` (required), `question`, `deciding_court`, `preferred_language`, `statute_references`, `clarifications`, `fedlex_urls`, `limit`.
 - `/attest`: `redacted_text`, `draft_text`, `audit_grounding`, `audit_quotes`, `client_redactor_version`, `client_redactor_summary`.
 - `/verify-claim`: `claim` (required), `decision_id` (required), `pinpoint`.
-- `/tool/{name}` takes the argument object described by that tool’s current `inputSchema`; do not wrap it in an `arguments` property.
+- `/tool/{name}` receives the supplied argument object directly; inspect the tool’s current `inputSchema` first and do not wrap it in an `arguments` property.
 
-## Official CLI versus REST
+## Scope and contract tests
 
-The [CLI guide](https://opencaselaw.ch/cli/) and [research manual](https://github.com/jonashertner/opencaselaw/blob/05a6dcd1f7c24ba4091d8ae254dc7975e1589db6/docs/research-cli.md) include local packs, draft/quotation checks, identity resolution, and evidence bundles. These are composed CLI workflows, not dedicated REST endpoints. They are not reimplemented here. The HTTP tool bridge exposes additional research capabilities, including administrative practice; the notebook demonstrates schema discovery before an optional call.
+This package provides HTTP wrappers, not the upstream CLI's local workflows. It has no CLI entry point, local packs, offline checks, or evidence-bundle implementation. Billing, quota, license-key, and admin wrappers are outside its scope. `call_tool()` accepts a tool name and arguments without local catalog/schema validation; available tools depend on the service.
 
-Billing, quota, license-key and admin operations remain outside this public research client. No live decision, scholarship, document-processing or tool-execution calls were made during this audit; only documentation/schema/catalog endpoints were fetched. Service availability, latency and populated result bodies were not end-to-end verified.
-
-The compact request-contract fixture in `tests/fixtures/public_api_contract.json` records the deployed schema URL, retrieval date and SHA-256. It is intentionally versioned to detect unsupported route/parameter changes without network-dependent tests.
+`tests/opencaselaw/test_api_contract.py` compares GET wrapper requests with the saved fixture. Other client tests cover POST bodies, XML, schema retrieval, and error handling using mock transports. These tests detect client drift from the snapshot; they cannot detect upstream changes, verify live availability, or validate every response field. See [PLAN.md](../PLAN.md) for remaining validation work.
