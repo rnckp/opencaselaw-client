@@ -51,18 +51,18 @@ with OpenCaseLawClient() as client:
 ```python
 results = client.search_decisions(
     query="Arbeitsvertrag Kündigung",
-    court="bger",             # court code, e.g. "bger", "bvger"
-    canton="CH",              # "CH", "ZH", "BE", ...
-    language="de",            # "de", "fr", "it", "rm"
+    court="bger",  # court code, e.g. "bger", "bvger"
+    canton="CH",  # "CH", "ZH", "BE", ...
+    language="de",  # "de", "fr", "it", "rm"
     date_from="2020-01-01",
     date_to="2024-12-31",
-    chamber="I",              # optional chamber substring
+    chamber="I",  # optional chamber substring
     decision_type="Urteil",
     limit=20,
     offset=0,
-    sort="date_desc",         # "relevance", "date_desc", "date_asc"
-    fields="compact",         # "full" or "compact"
-    request_timeout=60.0,      # optional per-call timeout for slow broad searches
+    sort="date_desc",  # "relevance", "date_desc", "date_asc"
+    fields="compact",  # "full" or "compact"
+    request_timeout=60.0,  # optional per-call timeout for slow broad searches
 )
 
 decision = client.get_decision("bger_4A_747_2012", full_text=True)
@@ -87,7 +87,7 @@ integrity = client.get_integrity_proof("bger_4A_747_2012")
 citation = client.cite("BGE 140 III 86", pinpoint="2.3", language="de")
 citations = client.get_citations(
     "bger_4A_747_2012",
-    direction="both",         # "both", "outgoing", "incoming"
+    direction="both",  # "both", "outgoing", "incoming"
     min_confidence=0.3,
     limit=50,
 )
@@ -135,7 +135,7 @@ search_hits = client.search_laws(
     query="Schadenersatz",
     sr_number="220",
     canton="CH",
-    jurisdiction="federal",   # "all", "federal", "cantonal"
+    jurisdiction="federal",  # "all", "federal", "cantonal"
     language="de",
     limit=10,
 )
@@ -250,7 +250,7 @@ from opencaselaw import (
 )
 ```
 
-The client models stable high-use shapes and preserves unknown fields in each model's `raw` attribute. Endpoints whose response schemas are not fully typed in the OpenAPI document return `dict[str, object]`-style dictionaries.
+The client uses frozen Pydantic models for stable high-use shapes and preserves the original payload, including unknown fields, in each model's `raw` attribute. Invalid known fields raise `pydantic.ValidationError` (a `ValueError` subclass), including malformed list entries; records are never silently dropped. `raw` and nested collections remain mutable. Models support keyword construction and `from_json()`; use `model_dump()` instead of dataclass utilities. Endpoints whose response schemas are not fully typed in the OpenAPI document return `dict[str, object]`-style dictionaries.
 
 ## Scope
 
@@ -290,7 +290,12 @@ uv sync
 uv run ruff format .
 uv run ruff check .
 uv run pytest -v
+uv build
 ```
+
+Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Python 3.13 and newer are supported. Tests use local mock transports and do not call the public API.
+
+Client instances are intended for sequential use. The delay is per client, not a shared per-IP limiter. HTTP errors and transport errors propagate to callers; retries are not automatic. Configuration rejects non-finite timing values, non-positive limits, and base URLs containing credentials, queries, or fragments.
 
 ## License
 

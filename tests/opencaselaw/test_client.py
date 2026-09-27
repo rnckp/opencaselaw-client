@@ -348,3 +348,67 @@ def test_context_manager_closes_client() -> None:
 
     with pytest.raises(RuntimeError, match="Cannot send a request"):
         client.get_statistics()
+
+
+@pytest.mark.parametrize("identifier", ["", ".", ".."])
+def test_invalid_path_segment_never_sends_request(identifier: str) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        pytest.fail("Invalid path segment reached transport")
+
+    with _client_with_handler(httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError):
+            client.get_decision(identifier)
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf")])
+def test_invalid_request_timeout_never_sends_request(timeout: float) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        pytest.fail("Invalid timeout reached transport")
+
+    with _client_with_handler(httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError):
+            client.search_decisions(request_timeout=timeout)
+
+
+@pytest.mark.parametrize("payload", [{"courts": "bad"}, {"courts": [42]}, [42]])
+def test_court_models_reject_malformed_items(payload: object) -> None:
+    with _client_with_handler(
+        httpx.MockTransport(lambda request: _json_response(payload))
+    ) as client:
+        with pytest.raises(ValueError):
+            client.list_court_models()
+
+
+def test_rate_limit_uses_monotonic_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    ticks = iter([100.0, 100.25, 101.0])
+    sleeps: list[float] = []
+    monkeypatch.setattr("opencaselaw.client.time.monotonic", lambda: next(ticks))
+    monkeypatch.setattr("opencaselaw.client.time.sleep", sleeps.append)
+    with OpenCaseLawClient(
+        rate_limit_delay=1.0,
+        transport=httpx.MockTransport(lambda request: _json_response({})),
+    ) as client:
+        client.get_statistics()
+        assert sleeps == []
+        client.get_statistics()
+    assert sleeps == [0.75]
+
+
+@pytest.mark.parametrize("status", [404, 429, 500])
+def test_http_errors_propagate_without_retry(status: int) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(status)
+
+    with _client_with_handler(httpx.MockTransport(handler)) as client:
+        with pytest.raises(httpx.HTTPStatusError) as error:
+            client.get_statistics()
+    assert error.value.response.status_code == status
+    assert len(seen) == 1
+
+
+def test_empty_base_url_is_not_silently_replaced() -> None:
+    with pytest.raises(ValueError, match="base_url"):
+        OpenCaseLawClient(base_url="")

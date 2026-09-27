@@ -125,10 +125,10 @@ def test_court_and_citation_parse_optional_fields() -> None:
 @pytest.mark.parametrize(
     ("model", "payload", "message"),
     [
-        (DecisionSummary, {}, "Missing required field: decision_id"),
-        (Decision, {"decision_id": None}, "Missing required field: decision_id"),
-        (LawArticle, {"article_num": "41"}, "Missing required field: text"),
-        (Court, {}, "Missing required field: court"),
+        (DecisionSummary, {}, "decision_id"),
+        (Decision, {"decision_id": None}, "decision_id"),
+        (LawArticle, {"article_num": "41"}, "text"),
+        (Court, {}, "court"),
     ],
 )
 def test_models_reject_missing_required_strings(
@@ -138,3 +138,56 @@ def test_models_reject_missing_required_strings(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         model.from_json(payload)
+
+
+@pytest.mark.parametrize("value", [None, "bad", {}, ["bad"], [{"decision_id": "valid"}, 42]])
+def test_search_rejects_malformed_results(value: object) -> None:
+    with pytest.raises(ValueError):
+        DecisionSearchResult.from_json({"results": value})
+
+
+@pytest.mark.parametrize("value", [None, "bad", {}, ["bad"]])
+def test_law_rejects_malformed_articles(value: object) -> None:
+    with pytest.raises(ValueError):
+        Law.from_json({"articles": value})
+
+
+@pytest.mark.parametrize("value", [True, [], {}, " "])
+def test_decision_rejects_invalid_identifier(value: object) -> None:
+    with pytest.raises(ValueError):
+        Decision.from_json({"decision_id": value})
+
+
+def test_nested_payloads_preserve_unknown_fields_and_identity() -> None:
+    item = {"decision_id": "test", "extra": {"source": "example"}}
+    payload = {"results": [item], "extra": "kept"}
+    result = DecisionSearchResult.from_json(payload)
+    assert result.raw is payload
+    assert result.results[0].raw is item
+    assert result.total == result.limit == 1
+    assert result.offset == 0
+
+
+def test_court_aliases_are_supported() -> None:
+    court = Court.from_json({"court_code": "bger", "decision_count": 3})
+    assert court.court == "bger"
+    assert court.count == 3
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True, "bad"])
+def test_search_rejects_invalid_counts(value: object) -> None:
+    with pytest.raises(ValueError, match="total"):
+        DecisionSearchResult.from_json({"total": value})
+
+
+def test_law_text_is_not_stripped() -> None:
+    article = LawArticle.from_json({"article_num": "1", "text": "  Text\n"})
+    assert article.text == "  Text\n"
+
+
+def test_models_validate_direct_construction_and_are_frozen() -> None:
+    with pytest.raises(ValueError, match="decision_id"):
+        Decision(decision_id={})
+    decision = Decision(decision_id="test")
+    with pytest.raises(ValueError, match="frozen"):
+        decision.decision_id = "changed"

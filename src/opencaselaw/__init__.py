@@ -15,9 +15,9 @@ from .models import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "DEFAULT_CONFIG",
     "Citation",
     "Court",
-    "DEFAULT_CONFIG",
     "Decision",
     "DecisionSearchResult",
     "DecisionSummary",

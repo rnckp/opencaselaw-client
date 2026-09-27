@@ -2,17 +2,24 @@
 
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 from urllib.parse import quote
 
 import httpx
+from pydantic import ConfigDict, TypeAdapter
 
-from .config import OpenCaseLawConfig, _normalize_config_values, load_config
+from .config import OpenCaseLawConfig, PositiveTimeout, load_config
 from .models import Citation, Court, Decision, DecisionSearchResult, Law
+
+_TIMEOUT_ADAPTER = TypeAdapter(PositiveTimeout, config=ConfigDict(hide_input_in_errors=True))
+_COURTS_ADAPTER = TypeAdapter(list[Court], config=ConfigDict(hide_input_in_errors=True))
 
 
 def _quote_segment(value: str | int) -> str:
-    return quote(str(value), safe="")
+    text = str(value)
+    if not text.strip() or text in {".", ".."}:
+        raise ValueError("Path segment must not be empty or a dot segment")
+    return quote(text, safe="")
 
 
 def _params(**values: Any) -> dict[str, Any]:
@@ -31,32 +38,22 @@ class OpenCaseLawClient:
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         """Initialize the client."""
-        self.config = load_config(config_path)
-        effective_config = OpenCaseLawConfig(
-            **_normalize_config_values(
-                {
-                    "base_url": base_url or self.config.base_url,
-                    "timeout": timeout if timeout is not None else self.config.timeout,
-                    "rate_limit_delay": (
-                        rate_limit_delay
-                        if rate_limit_delay is not None
-                        else self.config.rate_limit_delay
-                    ),
-                    "default_limit": self.config.default_limit,
-                }
-            )
+        config = load_config(config_path)
+        effective_config = OpenCaseLawConfig.model_validate(
+            config.model_dump()
+            | _params(base_url=base_url, timeout=timeout, rate_limit_delay=rate_limit_delay)
         )
         self.config = effective_config
         self.base_url = effective_config.base_url
         self.timeout = effective_config.timeout
         self.rate_limit_delay = effective_config.rate_limit_delay
-        self._last_request_time = 0.0
+        self._last_request_time: float | None = None
         self._client = httpx.Client(timeout=self.timeout, transport=transport)
 
-    def __enter__(self) -> "OpenCaseLawClient":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
 
     def close(self) -> None:
@@ -66,10 +63,11 @@ class OpenCaseLawClient:
     def _rate_limit(self) -> None:
         if self.rate_limit_delay <= 0:
             return
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self.rate_limit_delay:
-            time.sleep(self.rate_limit_delay - elapsed)
-        self._last_request_time = time.time()
+        if self._last_request_time is not None:
+            elapsed = time.monotonic() - self._last_request_time
+            if elapsed < self.rate_limit_delay:
+                time.sleep(self.rate_limit_delay - elapsed)
+        self._last_request_time = time.monotonic()
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}{path}"
@@ -86,6 +84,8 @@ class OpenCaseLawClient:
         json_data: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
+        if timeout is not None:
+            timeout = _TIMEOUT_ADAPTER.validate_python(timeout)
         self._rate_limit()
         request_kwargs: dict[str, Any] = {
             "params": params,
@@ -202,15 +202,8 @@ class OpenCaseLawClient:
     def list_court_models(self) -> list[Court]:
         """List available courts as parsed court items when the response is a list."""
         data = self.list_courts()
-        if isinstance(data, list):
-            return [Court.from_json(item) for item in data if isinstance(item, dict)]
-        if isinstance(data, dict):
-            courts = data.get("courts", [])
-            if isinstance(courts, list):
-                return [
-                    Court.from_json(item) for item in courts if isinstance(item, dict)
-                ]
-        return []
+        courts = data if isinstance(data, list) else data.get("courts", [])
+        return _COURTS_ADAPTER.validate_python(courts)
 
     def get_statistics(
         self,
@@ -354,9 +347,7 @@ class OpenCaseLawClient:
         )
         return Law.from_json(data)
 
-    def resolve_amendment_ref(
-        self, ref_type: str, year: int, page: int
-    ) -> dict[str, Any]:
+    def resolve_amendment_ref(self, ref_type: str, year: int, page: int) -> dict[str, Any]:
         """Resolve an AS/BBl/RO/RU/FF reference to a Fedlex ELI URI."""
         return self._get_json(
             "/amendment-ref",
