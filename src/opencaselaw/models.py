@@ -163,6 +163,11 @@ class Citation(_ResponseModel):
     canonical_url: str | None = None
     rule_statement: str | None = None
     exists: bool | None = Field(default=None, strict=True)
+    pinpoint: str | None = None
+    pinpoint_valid: bool | None = Field(default=None, strict=True)
+    pinpoint_status: str | None = None
+    pinpoint_note: str | None = None
+    valid_pinpoints: list[str] | None = None
     queried: str | None = None
     resolved_id: str | None = None
     citation_string: str | None = None

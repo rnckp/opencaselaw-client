@@ -22,6 +22,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
+markers = ["live_api: opt-in read-only requests to the public API"]
 
 [tool.uv]
 exclude-newer = "7 days"

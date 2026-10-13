@@ -2,9 +2,9 @@
 
 ## Evidence and verification limits
 
-This reference was checked against `src/opencaselaw/client.py`, its tests, and the [request-contract fixture](../tests/fixtures/public_api_contract.json). The fixture records an application-schema source URL, a check date of 2026-09-27, and a SHA-256 value. It contains selected methods, paths, and parameter schemas, but no response schemas or POST body schemas. The original schema is not stored, so its hash cannot be independently reproduced from this repository.
+On 2026-10-13, the deployed [application schema](https://mcp.opencaselaw.ch/api/openapi.json) and [typed research schema](https://mcp.opencaselaw.ch/api/research/openapi.json) were fetched and vendored in `tests/fixtures`. [schema_manifest.json](../tests/fixtures/schema_manifest.json) records their source URLs, date, and reproducible SHA-256 hashes of the stored files. The compact [request contract](../tests/fixtures/public_api_contract.json) contains all 51 research operations; the other 11 application operations are quota/billing/admin routes outside this package's scope. No structural request-parameter changes were found relative to the September snapshot.
 
-The previous audit cited the deployed application and typed research schemas, tool catalog, and upstream commit `05a6dcd1f7c24ba4091d8ae254dc7975e1589db6`. Those sources are not vendored here; current deployment behavior and upstream-source claims were not reverified in this repository-only review. Saved notebook outputs illustrate earlier responses, including failures; they are not repeatable service checks.
+POST fields were checked against the application body schemas; POST requests were not executed against the service. Five opt-in live tests passed for schema drift, populated core responses, slash-reference resolution, invalid pinpoint metadata, and explicit cantonal-law failure. These bounded checks do not establish availability of every endpoint or exhaustive corpus coverage. The selected response fixture omits decision text and unrelated fields. Research response schemas cover only seven routes; other response coverage remains partial.
 
 ## Client compatibility behavior
 
@@ -13,11 +13,13 @@ The previous audit cited the deployed application and typed research schemas, to
 - Relevant-Erwägung requests send `top_k`; `max_paragraphs` remains a Python alias. Conflicting values raise `ValueError`.
 - Search models retain continuation, lower-bound, degraded-ranking, and query-condensation metadata. Missing optional metadata stays `None`. The client neither paginates automatically nor establishes exhaustive coverage.
 - `Law.articles` can be absent or null, and article text can be absent, null, or empty. Inspect `text_status` and iterate over `articles or []`.
-- Tool responses marked `_is_error: true` raise `OpenCaseLawToolError`, retaining `.payload`. Other HTTP-success error payloads are not automatically raised; dictionaries and model `raw` fields retain them.
+- JSON responses with a non-empty top-level `error` raise `OpenCaseLawAPIError`, retaining `.payload`. `_is_error: true` raises its subclass `OpenCaseLawToolError`. Completed citation misses (`exists: false`) and empty searches remain valid results.
+- Slash-containing references passed to `get_decision()` use exact lookup before fetching a canonical ID. Missing, ambiguous, partial, malformed, or unroutable matches are rejected.
+- Citation pinpoint validity, status, warnings, and valid alternatives are typed fields. `exists: true` does not mean the requested passage exists; invalid pinpoints return unpinpointed citation strings.
 
 ## Endpoint inventory
 
-All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameters appear in braces. Numeric bounds below come from the saved contract, not a fresh deployment check; this client generally leaves endpoint-specific validation to the server. The client uses its configured `default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each server default.
+All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameters appear in braces. Numeric bounds below match the saved and freshly checked deployment contracts; this client generally leaves endpoint-specific validation to the server. The client uses its configured `default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each server default.
 
 | Method | Path | Query parameters | Numeric bounds |
 | --- | --- | --- | --- |
@@ -79,7 +81,7 @@ All paths below are relative to `https://mcp.opencaselaw.ch/api`. Path parameter
 
 ### JSON request bodies
 
-These fields are sent by the wrappers; required fields below are required Python arguments. The fixture does not validate body schemas.
+These fields are sent by the wrappers; required fields below are required Python arguments. The vendored application schema and POST contract tests verify body field coverage, required fields, types, and transport serialization.
 
 - `/mock-decision`: `facts` (required), `question`, `deciding_court`, `preferred_language`, `statute_references`, `clarifications`, `fedlex_urls`, `limit`.
 - `/attest`: `redacted_text`, `draft_text`, `audit_grounding`, `audit_quotes`, `client_redactor_version`, `client_redactor_summary`.
@@ -90,4 +92,4 @@ These fields are sent by the wrappers; required fields below are required Python
 
 This package provides HTTP wrappers, not the upstream CLI's local workflows. It has no CLI entry point, local packs, offline checks, or evidence-bundle implementation. Billing, quota, license-key, and admin wrappers are outside its scope. `call_tool()` accepts a tool name and arguments without local catalog/schema validation; available tools depend on the service.
 
-`tests/opencaselaw/test_api_contract.py` compares GET wrapper requests with the saved fixture. Other client tests cover POST bodies, XML, schema retrieval, and error handling using mock transports. These tests detect client drift from the snapshot; they cannot detect upstream changes, verify live availability, or validate every response field. See [PLAN.md](../PLAN.md) for remaining validation work.
+`test_api_contract.py` compares GET requests with the saved contract, and `test_schema_snapshots.py` checks the vendored schema hashes, POST bodies, selected response fixtures, and required typed research fields. Client tests cover XML, schema retrieval, error handling, and ambiguity rejection with local transports. Run `uv run pytest --live-api tests/opencaselaw/test_live_api.py` to check deployment drift and representative live behavior explicitly. Default tests never contact the service; manual CI dispatch can enable the live suite. These tests do not validate every response field or execute POST research workflows.

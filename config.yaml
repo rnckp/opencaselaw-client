@@ -1,0 +1,7 @@
+# Optional checkout defaults. Installed clients also work without this file.
+opencaselaw:
+  base_url: "https://mcp.opencaselaw.ch/api"
+  timeout: 30.0
+  # Pace sequential requests at no more than five starts per second.
+  rate_limit_delay: 0.2
+  default_limit: 10

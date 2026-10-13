@@ -1,0 +1,15 @@
+{
+  "checked_on": "2026-10-13",
+  "schemas": {
+    "application": {
+      "file": "application_openapi.json",
+      "source": "https://mcp.opencaselaw.ch/api/openapi.json",
+      "sha256": "b61fb1a5f016e3b4f52e43b9ac31d81ec1909bc70d57ab6f7f5cfbe6abccf275"
+    },
+    "research": {
+      "file": "research_openapi.json",
+      "source": "https://mcp.opencaselaw.ch/api/research/openapi.json",
+      "sha256": "f2eec4f01c3fbe85633f30c7bb8c067ba0cfeae7870a4fbfc7f8917173780e27"
+    }
+  }
+}

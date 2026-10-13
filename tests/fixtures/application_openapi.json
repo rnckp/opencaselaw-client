@@ -1,0 +1,4063 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OpenCaseLaw API",
+    "description": "Swiss court decisions, statutes, commentaries, scholarship, and citation graph. 1,050,000+ published decisions from Swiss federal, cantonal, and regulatory bodies, 5,525 federal laws, 15,600 cantonal acts, 1,100+ commentaries, 44,000+ OA scholarship records.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/lookup": {
+      "get": {
+        "tags": [
+          "Case Law"
+        ],
+        "summary": "Instant case-number lookup",
+        "description": "Resolve a Swiss case number / docket (e.g. 'BGE 140 III 86', '4A_636/2025', 'WBE.2026.33') straight to the matching decision(s) — an indexed exact match first (tens of ms), a search only for partial or near numbers (`match` says which). Returns lean hits with citation + /entscheid/ link. Use /decisions for topic search; `is_case_number=false` when the input is not a recognised docket. `total` counts returned hits, not all matches; at most 25 hits are returned. Inspect multiple hits for ambiguity; a full page cannot establish exhaustive uniqueness.",
+        "operationId": "api_lookup_lookup_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "A Swiss case number / docket (BGE/BGer/cantonal)",
+              "title": "Q"
+            },
+            "description": "A Swiss case number / docket (BGE/BGer/cantonal)"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `q`.",
+              "title": "Query"
+            },
+            "description": "Alias for `q`."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 25,
+              "minimum": 1,
+              "default": 8,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "exact",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only decisions whose own docket or BGE label is the reference (separator-agnostic, alias-aware); no related or citing decisions.",
+              "default": false,
+              "title": "Exact"
+            },
+            "description": "Only decisions whose own docket or BGE label is the reference (separator-agnostic, alias-aware); no related or citing decisions."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tool/{name}": {
+      "post": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Call any research tool and get its structured payload",
+        "description": "Every tool the MCP server offers, callable over plain HTTP: POST a JSON object of arguments (the tool's inputSchema; see GET /api/tool) and receive the handler's own dict — fields rather than Markdown. A tool-reported error comes back as HTTP 200 with an `error` key and `_is_error` true; an unknown tool is 404; invalid arguments are 422. Read-only; the same rate limits apply.",
+        "operationId": "api_tool_call_tool__name__post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tool": {
+      "get": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "List the research tools",
+        "description": "Every tool with its description and input schema; POST /api/tool/{name} calls one.",
+        "operationId": "api_tool_list_tool_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions": {
+      "get": {
+        "tags": [
+          "Case Law"
+        ],
+        "summary": "Search court decisions",
+        "description": "Full-text search across 1,050,000+ Swiss court decisions. Supports keywords, phrases (in quotes), Boolean operators (AND, OR, NOT), and prefix matching (word*). Each result carries citation_string_{de,fr,it} + canonical_url + rule_statement for copy-ready use in LLM responses. Large pages use compact citation entries. Page with `next_offset` while `has_more` is true. Relevance-ranked text searches use a bounded candidate pool: exhausting pages does not prove corpus completeness. When `total_is_lower_bound` is true, `total` is not an exact count. Filter-only searches can enumerate their matching records.",
+        "operationId": "api_search_decisions_decisions_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query (FTS5 syntax: keywords, \"phrases\", AND/OR/NOT). Max 4,000 chars; input over 500 chars is auto-condensed to citations + key terms — send 3-8 precise terms for best results.",
+              "title": "Query"
+            },
+            "description": "Search query (FTS5 syntax: keywords, \"phrases\", AND/OR/NOT). Max 4,000 chars; input over 500 chars is auto-condensed to citations + key terms — send 3-8 precise terms for best results."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query` (the short name used in the public docs / by most clients). `query` wins if both are given.",
+              "title": "Q"
+            },
+            "description": "Alias for `query` (the short name used in the public docs / by most clients). `query` wins if both are given."
+          },
+          {
+            "name": "court",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by court code (e.g., bger, bvger, zh_obergericht)",
+              "title": "Court"
+            },
+            "description": "Filter by court code (e.g., bger, bvger, zh_obergericht)"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by canton (CH, ZH, BE, GE, etc.)",
+              "title": "Canton"
+            },
+            "description": "Filter by canton (CH, ZH, BE, GE, etc.)"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by language: de, fr, it, rm — plus en, which reaches ECtHR judgments only (no Swiss case law is in English)",
+              "title": "Language"
+            },
+            "description": "Filter by language: de, fr, it, rm — plus en, which reaches ECtHR judgments only (no Swiss case law is in English)"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "Date From"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD)",
+              "title": "Date To"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          },
+          {
+            "name": "chamber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by chamber/division (substring match)",
+              "title": "Chamber"
+            },
+            "description": "Filter by chamber/division (substring match)"
+          },
+          {
+            "name": "marked_for_publication",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, return only Federal Supreme Court rulings flagged for the official BGE collection (Neuheiten '*' = 'für die Publikation vorgesehen') — future leading cases, flagged before the BGE number is assigned. Populated for BGer decisions from mid-2026 onward.",
+              "title": "Marked For Publication"
+            },
+            "description": "If true, return only Federal Supreme Court rulings flagged for the official BGE collection (Neuheiten '*' = 'für die Publikation vorgesehen') — future leading cases, flagged before the BGE number is assigned. Populated for BGer decisions from mid-2026 onward."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2000,
+              "minimum": 1,
+              "description": "Max results to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Max results to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Skip results for pagination",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Skip results for pagination"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Sort: relevance (default), date_desc, date_asc",
+              "title": "Sort"
+            },
+            "description": "Sort: relevance (default), date_desc, date_asc"
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Detail level: full or compact",
+              "default": "full",
+              "title": "Fields"
+            },
+            "description": "Detail level: full or compact"
+          },
+          {
+            "name": "include_pinpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Attach a pinpoint Erwägung citation to the top 5 full-fields results. Set false to skip the per-result lookup (typically saves 0.2-2 s; more for long or statute-heavy queries).",
+              "default": true,
+              "title": "Include Pinpoint"
+            },
+            "description": "Attach a pinpoint Erwägung citation to the top 5 full-fields results. Set false to skip the per-result lookup (typically saves 0.2-2 s; more for long or statute-heavy queries)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions/{decision_id}": {
+      "get": {
+        "tags": [
+          "Case Law"
+        ],
+        "summary": "Get a single decision",
+        "description": "Fetch a decision by decision_id or docket number. Returns full text, metadata, and citation_string_{de,fr,it} + canonical_url + rule_statement ready to embed verbatim in an LLM response.",
+        "operationId": "api_get_decision_decisions__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID (e.g., bger_6B_1_2025) or docket number (e.g., 6B_1/2025)",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID (e.g., bger_6B_1_2025) or docket number (e.g., 6B_1/2025)"
+          },
+          {
+            "name": "full_text",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include full text in response",
+              "default": true,
+              "title": "Full Text"
+            },
+            "description": "Include full text in response"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courts": {
+      "get": {
+        "tags": [
+          "Case Law"
+        ],
+        "summary": "List available courts",
+        "description": "List all courts with decision counts, date ranges, and language coverage.",
+        "operationId": "api_list_courts_courts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrity/{decision_id}": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "summary": "RFC-6962 Merkle inclusion proof",
+        "description": "Cryptographic proof that the given decision_id is included in today's published Merkle root (Bestimmung 06, OpenTimestamps-Bitcoin-anchored). Returns the leaf hash, the proof path (~20 siblings for 972k leaves), and the root. Verifier reconstructs the root by walking the proof and compares to docs/integrity/<date>.root. Reference implementation in integrity.py.",
+        "operationId": "api_integrity_proof_integrity__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Decision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper-health": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "summary": "Per-court scraper health (last daily run)",
+        "description": "Returns the latest scraper_health.json — one entry per scraper with success flag, decisions added in the last run, total decisions held by us, and last-known portal count where available. Drives the public /coverage/ transparency page. Refreshed nightly by the publish pipeline; cache-busted via the run_at timestamp.",
+        "operationId": "api_scraper_health_scraper_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/statistics": {
+      "get": {
+        "tags": [
+          "Case Law"
+        ],
+        "summary": "Get dataset statistics",
+        "description": "Aggregate statistics about the dataset. Optionally filter by court, canton, or year.",
+        "operationId": "api_get_statistics_statistics_get",
+        "parameters": [
+          {
+            "name": "court",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by court code",
+              "title": "Court"
+            },
+            "description": "Filter by court code"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by canton code",
+              "title": "Canton"
+            },
+            "description": "Filter by canton code"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Filter by year",
+              "title": "Year"
+            },
+            "description": "Filter by year"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/citations/{decision_id}": {
+      "get": {
+        "tags": [
+          "Citation Graph"
+        ],
+        "summary": "Find citations for a decision",
+        "description": "Show what a decision cites and what cites it. Uses the reference graph with 9.65M citation edges.",
+        "operationId": "api_find_citations_citations__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID (e.g., bger_6B_1_2025)",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID (e.g., bger_6B_1_2025)"
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Citation direction: both, outgoing, or incoming",
+              "default": "both",
+              "title": "Direction"
+            },
+            "description": "Citation direction: both, outgoing, or incoming"
+          },
+          {
+            "name": "min_confidence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 1,
+              "minimum": 0,
+              "description": "Minimum confidence score (0-1)",
+              "default": 0.3,
+              "title": "Min Confidence"
+            },
+            "description": "Minimum confidence score (0-1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Max citations per direction per page",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Max citations per direction per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Pagination offset per direction (see *_has_more / next_offset)",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Pagination offset per direction (see *_has_more / next_offset)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appeal-chain/{decision_id}": {
+      "get": {
+        "tags": [
+          "Citation Graph"
+        ],
+        "summary": "Trace appeal chain",
+        "description": "Trace the appeal chain (Instanzenzug) for a decision. Shows prior and subsequent instances.",
+        "operationId": "api_find_appeal_chain_appeal_chain__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID (e.g., bger_6B_1_2025)",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID (e.g., bger_6B_1_2025)"
+          },
+          {
+            "name": "min_confidence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 1,
+              "minimum": 0,
+              "description": "Minimum confidence score (0-1)",
+              "default": 0.3,
+              "title": "Min Confidence"
+            },
+            "description": "Minimum confidence score (0-1)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/leading-cases": {
+      "get": {
+        "tags": [
+          "Citation Graph"
+        ],
+        "summary": "Find leading cases",
+        "description": "Find the most-cited decisions for a topic or statute. Authority ranking based on citation graph. Each result carries citation_string_{de,fr,it} + canonical_url + rule_statement for copy-ready use.",
+        "operationId": "api_find_leading_cases_leading_cases_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Text query to filter by topic (max 4,000 chars)",
+              "title": "Query"
+            },
+            "description": "Text query to filter by topic (max 4,000 chars)"
+          },
+          {
+            "name": "law_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Law code (e.g., BV, OR, ZGB, StGB)",
+              "title": "Law Code"
+            },
+            "description": "Law code (e.g., BV, OR, ZGB, StGB)"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number (requires law_code)",
+              "title": "Article"
+            },
+            "description": "Article number (requires law_code)"
+          },
+          {
+            "name": "court",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Court filter (e.g., bger, bge, bvger)",
+              "title": "Court"
+            },
+            "description": "Court filter (e.g., bger, bge, bvger)"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "Date From"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD)",
+              "title": "Date To"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          },
+          {
+            "name": "include_pinpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Attach a pinpoint Erwägung citation to the top 3 results when a free-text query is given. Set false to skip the lookup.",
+              "default": true,
+              "title": "Include Pinpoint"
+            },
+            "description": "Attach a pinpoint Erwägung citation to the top 3 results when a free-text query is given. Set false to skip the lookup."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trends": {
+      "get": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Analyze legal trend",
+        "description": "Year-by-year decision counts showing jurisprudence evolution.",
+        "operationId": "api_analyze_legal_trend_trends_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Text query",
+              "title": "Query"
+            },
+            "description": "Text query"
+          },
+          {
+            "name": "law_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Law code (e.g., BV, OR). Requires article.",
+              "title": "Law Code"
+            },
+            "description": "Law code (e.g., BV, OR). Requires article."
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number (requires law_code)",
+              "title": "Article"
+            },
+            "description": "Article number (requires law_code)"
+          },
+          {
+            "name": "court",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Court filter",
+              "title": "Court"
+            },
+            "description": "Court filter"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "Date From"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD)",
+              "title": "Date To"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock-decision": {
+      "post": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Draft a mock decision",
+        "description": "Build a research-only mock decision outline from user facts, grounded in case law and statute references.",
+        "operationId": "api_mock_decision_mock_decision_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MockDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/laws/search": {
+      "get": {
+        "tags": [
+          "Statutes"
+        ],
+        "summary": "Search Swiss statute articles (federal + cantonal)",
+        "description": "Unified FTS5 search across statutes.db (federal) and cantonal_laws.db (all 26 cantons).",
+        "operationId": "api_search_laws_laws_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "title": "Query"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "sr_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Restrict to specific federal law by SR",
+              "title": "Sr Number"
+            },
+            "description": "Restrict to specific federal law by SR"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Restrict to canton (ZH, BE, …, CH=federal)",
+              "title": "Canton"
+            },
+            "description": "Restrict to canton (ZH, BE, …, CH=federal)"
+          },
+          {
+            "name": "jurisdiction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "all | federal | cantonal",
+              "default": "all",
+              "title": "Jurisdiction"
+            },
+            "description": "all | federal | cantonal"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "OPTIONAL filter (de/fr/it). Omit to search all three official languages — most laws exist in DE/FR/IT and a filter silently hides valid hits in the others. Set ONLY when the user explicitly asks for one language.",
+              "title": "Language"
+            },
+            "description": "OPTIONAL filter (de/fr/it). Omit to search all three official languages — most laws exist in DE/FR/IT and a filter silently hides valid hits in the others. Set ONLY when the user explicitly asks for one language."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/laws/{abbreviation}": {
+      "get": {
+        "tags": [
+          "Statutes"
+        ],
+        "summary": "Look up a Swiss law (federal + cantonal)",
+        "description": "Look up a federal law by abbreviation/SR or a cantonal law by SR + canton.",
+        "operationId": "api_get_law_laws__abbreviation__get",
+        "parameters": [
+          {
+            "name": "abbreviation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Law abbreviation (e.g., BV, OR, ZGB, StGB) — or '_' for cantonal lookup by SR",
+              "title": "Abbreviation"
+            },
+            "description": "Law abbreviation (e.g., BV, OR, ZGB, StGB) — or '_' for cantonal lookup by SR"
+          },
+          {
+            "name": "sr_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SR number (e.g., 210 for ZGB)",
+              "title": "Sr Number"
+            },
+            "description": "SR number (e.g., 210 for ZGB)"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number to retrieve (e.g., 8, 41a)",
+              "title": "Article"
+            },
+            "description": "Article number to retrieve (e.g., 8, 41a)"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language: de, fr, it",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Language: de, fr, it"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Canton code (CH=federal, ZH, BE, …)",
+              "default": "CH",
+              "title": "Canton"
+            },
+            "description": "Canton code (CH=federal, ZH, BE, …)"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Past date (YYYY-MM-DD or DD.MM.YYYY): the historical Fedlex edition in force on that date; federal laws only",
+              "title": "As Of"
+            },
+            "description": "Past date (YYYY-MM-DD or DD.MM.YYYY): the historical Fedlex edition in force on that date; federal laws only"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "json (default) or xml — for a single federal article, returns its verbatim Akoma Ntoso XML (application/xml). Issue #22.",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "json (default) or xml — for a single federal article, returns its verbatim Akoma Ntoso XML (application/xml). Issue #22."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/laws/{abbreviation}/{canton}": {
+      "get": {
+        "tags": [
+          "Statutes"
+        ],
+        "summary": "Look up a cantonal law by name and canton",
+        "description": "Cantonal law by abbreviation + canton in either order: /api/laws/GOG/GL or /api/laws/GL/GOG. Same response as /api/laws/{abbreviation}?canton=GL.",
+        "operationId": "api_get_law_cantonal_path_laws__abbreviation___canton__get",
+        "parameters": [
+          {
+            "name": "abbreviation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Law abbreviation or canton code",
+              "title": "Abbreviation"
+            },
+            "description": "Law abbreviation or canton code"
+          },
+          {
+            "name": "canton",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canton code or law abbreviation — either order",
+              "title": "Canton"
+            },
+            "description": "Canton code or law abbreviation — either order"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article / § number to retrieve",
+              "title": "Article"
+            },
+            "description": "Article / § number to retrieve"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language: de, fr, it (the canton's publication language)",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Language: de, fr, it (the canton's publication language)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/amendment-ref": {
+      "get": {
+        "tags": [
+          "Statutes"
+        ],
+        "summary": "Resolve AS/BBl reference to Fedlex ELI URI",
+        "description": "Maps an AS or BBl page reference to its Fedlex ELI URI. Backed by materialien.db.amendment_refs (83k+ resolved refs). BBl/FF refs construct to eli/fga/{year}/{page}; AS/RO/RU to eli/oc/{year}/{page}. Each URL is validated against Fedlex's RDF graph via a SPARQL ASK — inner-page citations whose page number is not a first-page document return null with a fedlex_status='inner_page_no_direct_url' note.",
+        "operationId": "api_amendment_ref_amendment_ref_get",
+        "parameters": [
+          {
+            "name": "ref_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Reference type: AS, BBl, RO, RU, FF",
+              "title": "Ref Type"
+            },
+            "description": "Reference type: AS, BBl, RO, RU, FF"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Publication year",
+              "title": "Year"
+            },
+            "description": "Publication year"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Page number",
+              "title": "Page"
+            },
+            "description": "Page number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commentaries/search": {
+      "get": {
+        "tags": [
+          "Commentaries"
+        ],
+        "summary": "Search commentaries",
+        "description": "Search the article-anchored commentaries: OnlineKommentar.ch / OpenLegalCommentary.ch and the Kommentar zur Schaffhauser Verwaltungsrechtspflege.",
+        "operationId": "api_search_commentaries_commentaries_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "title": "Query"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "abbreviation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by law abbreviation",
+              "title": "Abbreviation"
+            },
+            "description": "Filter by law abbreviation"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by language",
+              "title": "Language"
+            },
+            "description": "Filter by language"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commentaries/{abbreviation}": {
+      "get": {
+        "tags": [
+          "Commentaries"
+        ],
+        "summary": "Get commentary for a law",
+        "description": "Get OnlineKommentar commentary for a specific law article.",
+        "operationId": "api_get_commentary_commentaries__abbreviation__get",
+        "parameters": [
+          {
+            "name": "abbreviation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Law abbreviation (e.g., OR, ZGB)",
+              "title": "Abbreviation"
+            },
+            "description": "Law abbreviation (e.g., OR, ZGB)"
+          },
+          {
+            "name": "sr_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SR number",
+              "title": "Sr Number"
+            },
+            "description": "SR number"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number",
+              "title": "Article"
+            },
+            "description": "Article number"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language: de, fr, it",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Language: de, fr, it"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Canton code for a cantonal act (e.g. SH with VRG or JG)",
+              "title": "Canton"
+            },
+            "description": "Canton code for a cantonal act (e.g. SH with VRG or JG)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/search": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Search OA Swiss legal scholarship",
+        "description": "Full-text search across the unified scholarship corpus (OA journal articles + commentaries + dissertations + books + reports). Returns ranked results with snippets and per-source attribution (required by CC-BY / CC-BY-SA license terms — preserve when re-using).",
+        "operationId": "api_search_scholarship_scholarship_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Topic query (FTS5 syntax); optional if `author` or a filter is given",
+              "title": "Query"
+            },
+            "description": "Topic query (FTS5 syntax); optional if `author` or a filter is given"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by source slug",
+              "title": "Source"
+            },
+            "description": "Filter by source slug"
+          },
+          {
+            "name": "pub_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by publication type",
+              "title": "Pub Type"
+            },
+            "description": "Filter by publication type"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language filter (de/fr/it/en)",
+              "title": "Language"
+            },
+            "description": "Language filter (de/fr/it/en)"
+          },
+          {
+            "name": "year_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Earliest publication year",
+              "title": "Year Min"
+            },
+            "description": "Earliest publication year"
+          },
+          {
+            "name": "year_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Latest publication year",
+              "title": "Year Max"
+            },
+            "description": "Latest publication year"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by author (substring); usable without a query for a bibliographic browse",
+              "title": "Author"
+            },
+            "description": "Filter by author (substring); usable without a query for a bibliographic browse"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Order: relevance (default) / year / year_asc",
+              "title": "Sort"
+            },
+            "description": "Order: relevance (default) / year / year_asc"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/sources": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "List indexed scholarship sources + license catalog",
+        "description": "Returns counts per source + license + attribution. Always available even when the scholarship DB is empty.",
+        "operationId": "api_list_scholarship_sources_scholarship_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/licenses": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Full license + attribution catalog for all sources",
+        "description": "Source-by-source license terms, license URLs, homepages, and attribution text. Includes active and scaffolded-but-inactive sources so the catalog lists everything that will eventually be served.",
+        "operationId": "api_scholarship_licenses_scholarship_licenses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/citation-stats": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Citation-bridge counts between scholarship and caselaw",
+        "description": "Returns live counts of the resolved citations from scholarship full-text into the canonical decision + statute corpora. Populated nightly by Step 2b of build_legal_scholarship.py.",
+        "operationId": "api_scholarship_citation_stats_scholarship_citation_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/cited-by-statute": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Scholarship citing a statute article",
+        "operationId": "api_scholarship_cited_by_statute_scholarship_cited_by_statute_get",
+        "parameters": [
+          {
+            "name": "sr_number",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "SR number (e.g. '220')",
+              "title": "Sr Number"
+            },
+            "description": "SR number (e.g. '220')"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number (e.g. '41')",
+              "title": "Article"
+            },
+            "description": "Article number (e.g. '41')"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/cited-by-decision": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Scholarship citing a court decision",
+        "operationId": "api_scholarship_cited_by_decision_scholarship_cited_by_decision_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision id (e.g. 'bge_BGE_140_III_86')",
+              "title": "Decision Id"
+            },
+            "description": "Decision id (e.g. 'bge_BGE_140_III_86')"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship-fulltext": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Get full text of an OA publication (on demand)",
+        "operationId": "api_get_scholarship_full_text_scholarship_fulltext_get",
+        "parameters": [
+          {
+            "name": "pub_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical pub_id",
+              "title": "Pub Id"
+            },
+            "description": "Canonical pub_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scholarship/{pub_id}": {
+      "get": {
+        "tags": [
+          "Scholarship"
+        ],
+        "summary": "Get a single publication by pub_id",
+        "operationId": "api_get_scholarship_scholarship__pub_id__get",
+        "parameters": [
+          {
+            "name": "pub_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical pub_id",
+              "title": "Pub Id"
+            },
+            "description": "Canonical pub_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/materialien/{law_code}": {
+      "get": {
+        "tags": [
+          "Materialien"
+        ],
+        "summary": "Get preparatory materials for a law article",
+        "description": "Returns the Federal Council Botschaft data: legislative intent, key arguments, design choices, rejected alternatives, and parliamentary modifications.",
+        "operationId": "api_get_materialien_materialien__law_code__get",
+        "parameters": [
+          {
+            "name": "law_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Law abbreviation (e.g., BGFA, BV)",
+              "title": "Law Code"
+            },
+            "description": "Law abbreviation (e.g., BGFA, BV)"
+          },
+          {
+            "name": "article",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Article number (e.g., '1', '8')",
+              "title": "Article"
+            },
+            "description": "Article number (e.g., '1', '8')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/materialien": {
+      "get": {
+        "tags": [
+          "Materialien"
+        ],
+        "summary": "Search preparatory materials",
+        "description": "Full-text search across all Botschaft data.",
+        "operationId": "api_search_materialien_materialien_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "title": "Query"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "law_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by law code",
+              "title": "Law Code"
+            },
+            "description": "Filter by law code"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 10,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legislation/search": {
+      "get": {
+        "tags": [
+          "Legislation"
+        ],
+        "summary": "Search legislation",
+        "description": "Search Swiss legislation (federal + all 26 cantons) by keyword. Covers 33,000+ legislative texts from LexFind.ch.",
+        "operationId": "api_search_legislation_legislation_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "title": "Query"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Filter by canton (CH, ZH, BE, etc.)",
+              "title": "Canton"
+            },
+            "description": "Filter by canton (CH, ZH, BE, etc.)"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "OPTIONAL filter (de/fr/it). Omit to return whichever language version the portal indexes — set ONLY when the user explicitly asks for one language.",
+              "title": "Language"
+            },
+            "description": "OPTIONAL filter (de/fr/it). Omit to return whichever language version the portal indexes — set ONLY when the user explicitly asks for one language."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "description": "Max results",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Max results"
+          },
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only show laws currently in force",
+              "default": true,
+              "title": "Active Only"
+            },
+            "description": "Only show laws currently in force"
+          },
+          {
+            "name": "search_in_content",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Also search in law text content",
+              "default": false,
+              "title": "Search In Content"
+            },
+            "description": "Also search in law text content"
+          },
+          {
+            "name": "fetch_top_n_texts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 0,
+              "description": "If > 0, enrich top N results with parsed full text (max 10)",
+              "default": 0,
+              "title": "Fetch Top N Texts"
+            },
+            "description": "If > 0, enrich top N results with parsed full text (max 10)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legislation/changes": {
+      "get": {
+        "tags": [
+          "Legislation"
+        ],
+        "summary": "Browse legislation changes",
+        "description": "Browse recent legislation changes for a canton or federal level.",
+        "operationId": "api_browse_legislation_changes_legislation_changes_get",
+        "parameters": [
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Canton code (CH for federal, ZH, BE, etc.)",
+              "default": "CH",
+              "title": "Canton"
+            },
+            "description": "Canton code (CH for federal, ZH, BE, etc.)"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "OPTIONAL filter (de/fr/it). Omit to return amendments in whichever language the canton indexes them. Set ONLY when the user explicitly asks for one language.",
+              "title": "Language"
+            },
+            "description": "OPTIONAL filter (de/fr/it). Omit to return amendments in whichever language the canton indexes them. Set ONLY when the user explicitly asks for one language."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legislation/{lexfind_id}": {
+      "get": {
+        "tags": [
+          "Legislation"
+        ],
+        "summary": "Get legislation details",
+        "description": "Get details for a specific Swiss law by LexFind ID or systematic number.",
+        "operationId": "api_get_legislation_legislation__lexfind_id__get",
+        "parameters": [
+          {
+            "name": "lexfind_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "LexFind ID of the law",
+              "title": "Lexfind Id"
+            },
+            "description": "LexFind ID of the law"
+          },
+          {
+            "name": "systematic_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "SR/systematic number",
+              "title": "Systematic Number"
+            },
+            "description": "SR/systematic number"
+          },
+          {
+            "name": "canton",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Canton for systematic number lookup",
+              "default": "CH",
+              "title": "Canton"
+            },
+            "description": "Canton for systematic number lookup"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language: de, fr, it",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Language: de, fr, it"
+          },
+          {
+            "name": "include_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include full version history",
+              "default": false,
+              "title": "Include Versions"
+            },
+            "description": "Include full version history"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/doctrine": {
+      "get": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Get doctrine for a legal topic",
+        "description": "Statute text + authority-ranked BGEs + doctrine timeline + commentary excerpt.",
+        "operationId": "api_get_doctrine_doctrine_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Legal topic, statute reference, or concept",
+              "title": "Query"
+            },
+            "description": "Legal topic, statute reference, or concept"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/case-brief/{case}": {
+      "get": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Get structured case brief",
+        "description": "Structured case brief: facts, reasoning, statutes, authority, related cases. Includes citation_string_{de,fr,it} + canonical_url + rule_statement at the top level for copy-ready citation.",
+        "operationId": "api_get_case_brief_case_brief__case__get",
+        "parameters": [
+          {
+            "name": "case",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID, docket number, or BGE reference",
+              "title": "Case"
+            },
+            "description": "Decision ID, docket number, or BGE reference"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cite": {
+      "get": {
+        "tags": [
+          "Citation Integrity"
+        ],
+        "summary": "Build a canonical Swiss citation",
+        "description": "Given any Swiss case reference (decision_id, BGE ref, docket number), returns the canonical citation string in DE / FR / IT, the canonical URL with #e-N-M pinpoint anchor, and a verbatim rule_statement. When the reference doesn't resolve, returns exists=false + close_matches for typo-correction. Call this BEFORE writing any case citation.",
+        "operationId": "api_cite_cite_get",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Case reference: 'BGE 140 III 86', '4A_747/2012', 'bger_4A_747_2012', 'MKGE 16 Nr. 1'.",
+              "title": "Reference"
+            },
+            "description": "Case reference: 'BGE 140 III 86', '4A_747/2012', 'bger_4A_747_2012', 'MKGE 16 Nr. 1'."
+          },
+          {
+            "name": "pinpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional Erwägung/consid. number, e.g. '2.3'.",
+              "title": "Pinpoint"
+            },
+            "description": "Optional Erwägung/consid. number, e.g. '2.3'."
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Primary language for the citation_string field (de/fr/it). All three variants always returned.",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Primary language for the citation_string field (de/fr/it). All three variants always returned."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attest": {
+      "post": {
+        "tags": [
+          "Citation Integrity"
+        ],
+        "summary": "Audit a draft for fabricated / invalid citations",
+        "description": "Parses all Swiss-case citations (BGE/BGer/BVGer/BStGer/BPatGer/MKGE/ATF/TF/TAF/TPF/TFB/ATMC/STMC) in a draft response, verifies each decision exists in the corpus, and verifies any pinpoint (E./consid.) actually exists in that decision's structured Erwägungen. Returns {ok, citations_found, citations_ok, issues_count, annotated_text, issues}. CALL THIS before finalizing any LLM response containing ≥1 case citation.",
+        "operationId": "api_attest_attest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/_AttestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify-claim": {
+      "post": {
+        "tags": [
+          "Citation Integrity"
+        ],
+        "summary": "Verify that a decision supports a claim (Sonnet-4.6 judge)",
+        "description": "Given a legal claim + a decision (+ optional Erwägung pinpoint), an independent Sonnet judge determines whether the decision's verbatim text supports the claim. Returns {supports: yes|partial|no|contradicts|unrelated, confidence, supporting_excerpt, qualifying_excerpt, reasoning}. Use when paraphrasing a decision or drawing a proposition from a complex Erwägung — counters the mis-grounding / reasoning-error class measured at 17-33% on commercial legal-RAG tools by Magesh et al., 'Hallucination-Free?', Stanford RegLab, 2024 (cited authority exists but doesn't actually support the proposition).",
+        "operationId": "api_verify_claim_verify_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/_VerifyClaimBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions/{decision_id}/export.docx": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Download a decision as Word (.docx)",
+        "description": "Returns a Word document containing the canonical citation, Regeste, and structured Erwägungen of the decision — ready to drop into a brief or memo. Falls back to plain-text (.txt) if python-docx is not installed on the server.",
+        "operationId": "api_export_docx_decisions__decision_id__export_docx_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Canonical decision ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions/{decision_id}/export.pdf": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Download a decision as PDF",
+        "description": "Returns a PDF rendering of the decision in the canonical OpenCaseLaw style: Times New Roman 12 pt, 1.2 line spacing, monochrome, A4. Falls back to plain-text (.txt) if reportlab is not installed.",
+        "operationId": "api_export_pdf_decisions__decision_id__export_pdf_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Canonical decision ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions/{decision_id}/export.bib": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Download a decision as BibTeX",
+        "description": "Returns a BibTeX `@misc{...}` entry suitable for LaTeX bibliographies and reference managers.",
+        "operationId": "api_export_bibtex_decisions__decision_id__export_bib_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Canonical decision ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/decisions/{decision_id}/export.ris": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Download a decision as RIS (Zotero/EndNote/Mendeley)",
+        "description": "Returns an RIS bibliographic record (TY-CASE) consumable by Zotero, EndNote, Mendeley, and other common reference managers.",
+        "operationId": "api_export_ris_decisions__decision_id__export_ris_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Canonical decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Canonical decision ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/atom/{court}.xml": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "summary": "Atom feed of newest decisions for a court",
+        "description": "Atom 1.0 feed of the 50 most recent decisions from a given court. Subscribe in any feed reader (NetNewsWire, Inoreader, Feedbin, etc.) to get a daily digest of newly published decisions.",
+        "operationId": "api_atom_court_atom__court__xml_get",
+        "parameters": [
+          {
+            "name": "court",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Court code (e.g. bger, bvger, zh_obergericht)",
+              "title": "Court"
+            },
+            "description": "Court code (e.g. bger, bvger, zh_obergericht)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/erwaegung/{decision_id}/{e_number}": {
+      "get": {
+        "tags": [
+          "Decision Structure"
+        ],
+        "summary": "Get the verbatim text of one Erwägung",
+        "description": "Returns the exact wording of a specific numbered paragraph (e.g. Erwägung 4.1). Use this before quoting from a decision — the `text` field is safe to embed verbatim in quotation marks. Available for ~90% of federal decisions (BGer / BVGer / BStGer / BGE / BPatGer / EGMR-CH / MKG). Returns 404 when the decision is unknown, has no structured Erwägungen, or does not contain the requested one.",
+        "operationId": "api_get_erwaegung_erwaegung__decision_id___e_number__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID"
+          },
+          {
+            "name": "e_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Hierarchical Erwägung number, e.g. '1', '4.1', '4.1.2'",
+              "title": "E Number"
+            },
+            "description": "Hierarchical Erwägung number, e.g. '1', '4.1', '4.1.2'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/relevant-erwaegung/{decision_id}": {
+      "get": {
+        "tags": [
+          "Decision Structure"
+        ],
+        "summary": "Find the Erwägung paragraph(s) that match a legal claim",
+        "description": "Server-side FTS5 + BM25 ranking over per-paragraph text. Returns top-k matches with confidence labels (high / medium / low) and a highlighted_snippet showing the matched sentence(s). Refuses to surface a guess when the score gap is weak — fixes the systematic 'pinpoint=3.1 fallback' failure mode.",
+        "operationId": "api_find_relevant_erwaegung_relevant_erwaegung__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID, BGE reference, or docket number",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID, BGE reference, or docket number"
+          },
+          {
+            "name": "claim",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The legal claim or proposition to match against the decision's Erwägungen.",
+              "title": "Claim"
+            },
+            "description": "The legal claim or proposition to match against the decision's Erwägungen."
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "description": "Number of top matches to return.",
+              "default": 3,
+              "title": "Top K"
+            },
+            "description": "Number of top matches to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/article-purpose/{sr_number}/{article}": {
+      "get": {
+        "tags": [
+          "Materialien"
+        ],
+        "summary": "Get verbatim Botschaft text explaining an article's purpose",
+        "description": "Joins the verbatim Federal Council Botschaft corpus (post-2003 BBl, Akoma Ntoso XML preferred) with the article-Botschaft link table. Returns one entry per Botschaft (originating + amendments) with verbatim paragraphs the LLM can quote with `bbl_citation, S. {page}` references. Coverage rolls out as the Phase 2 ingestion processes ~1500 BBl publications from amendment_refs.",
+        "operationId": "api_get_article_purpose_article_purpose__sr_number___article__get",
+        "parameters": [
+          {
+            "name": "sr_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "SR number of the law (e.g. '220' for OR)",
+              "title": "Sr Number"
+            },
+            "description": "SR number of the law (e.g. '220' for OR)"
+          },
+          {
+            "name": "article",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Article number (e.g. '41', '41a')",
+              "title": "Article"
+            },
+            "description": "Article number (e.g. '41', '41a')"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(de|fr|it)$",
+              "description": "Botschaft language",
+              "default": "de",
+              "title": "Language"
+            },
+            "description": "Botschaft language"
+          },
+          {
+            "name": "max_paragraphs",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 8,
+              "title": "Max Paragraphs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search-botschaft": {
+      "get": {
+        "tags": [
+          "Materialien"
+        ],
+        "summary": "Topical FTS5 search over the verbatim Botschaft corpus",
+        "description": "Where /article-purpose answers 'why does Art. X exist?', /search-botschaft answers 'show me every Botschaft passage about TOPIC X'. Returns BM25-ranked paragraphs with bbl_citation, page, section path, and an article anchor where the parser could identify one. FTS5 syntax supported: quoted phrases, AND/OR/NOT operators, prefix queries.",
+        "operationId": "api_search_botschaft_search_botschaft_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search terms (FTS5 syntax)",
+              "title": "Query"
+            },
+            "description": "Search terms (FTS5 syntax)"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Alias for `query`.",
+              "title": "Q"
+            },
+            "description": "Alias for `query`."
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(de|fr|it)$",
+              "description": "Optional language filter — leave unset to search all three official languages of the verbatim Botschaft corpus.",
+              "title": "Language"
+            },
+            "description": "Optional language filter — leave unset to search all three official languages of the verbatim Botschaft corpus."
+          },
+          {
+            "name": "year_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Earliest source-Botschaft publication year (inclusive)",
+              "title": "Year Min"
+            },
+            "description": "Earliest source-Botschaft publication year (inclusive)"
+          },
+          {
+            "name": "year_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Latest source-Botschaft publication year (inclusive)",
+              "title": "Year Max"
+            },
+            "description": "Latest source-Botschaft publication year (inclusive)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/article-history/{sr_number}/{article}": {
+      "get": {
+        "tags": [
+          "Materialien"
+        ],
+        "summary": "Chronological story of a statute article",
+        "description": "Combines current article text + every linked Botschaft (enacted + amendments) + leading court interpretations + doctrinal commentary into a single dated timeline. One call returns the full legislative + judicial + doctrinal arc of an article. Each timeline entry has a `kind` field (botschaft | court_decision | commentary) and a stable URI.",
+        "operationId": "api_get_article_history_article_history__sr_number___article__get",
+        "parameters": [
+          {
+            "name": "sr_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "SR number of the federal law",
+              "title": "Sr Number"
+            },
+            "description": "SR number of the federal law"
+          },
+          {
+            "name": "article",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Article number",
+              "title": "Article"
+            },
+            "description": "Article number"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(de|fr|it)$",
+              "default": "de",
+              "title": "Language"
+            }
+          },
+          {
+            "name": "leading_cases_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 15,
+              "minimum": 1,
+              "default": 5,
+              "title": "Leading Cases Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/regeste/{decision_id}": {
+      "get": {
+        "tags": [
+          "Decision Structure"
+        ],
+        "summary": "Get the official Regeste (head-note)",
+        "description": "Returns the court's own formulation of the legal rule established by the decision — the canonical citation target for BGEs. References like '(E. 5.2.1)' inside the Regeste point to specific Erwägungen, retrievable with /erwaegung/.",
+        "operationId": "api_get_regeste_regeste__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID, BGE reference, or docket number",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID, BGE reference, or docket number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/structure/{decision_id}": {
+      "get": {
+        "tags": [
+          "Decision Structure"
+        ],
+        "summary": "Get the full structured decision",
+        "description": "Returns Sachverhalt + Erwägungen-paragraphs + Dispositiv + Regeste as separately addressable fields. Federal decisions only (232 k rows, 90.6% Erwägungen coverage).",
+        "operationId": "api_get_structure_structure__decision_id__get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Decision ID",
+              "title": "Decision Id"
+            },
+            "description": "Decision ID"
+          },
+          {
+            "name": "paragraph_excerpt_chars",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 50,
+              "description": "Truncate each Erwägung excerpt to N chars (full text via /erwaegung/).",
+              "default": 250,
+              "title": "Paragraph Excerpt Chars"
+            },
+            "description": "Truncate each Erwägung excerpt to N chars (full text via /erwaegung/)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/exam-question": {
+      "get": {
+        "tags": [
+          "Research"
+        ],
+        "summary": "Generate exam question",
+        "description": "Generate a law exam question from a real BGE fact pattern.",
+        "operationId": "api_generate_exam_question_exam_question_get",
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Legal topic (e.g., Vertragsrecht, Haftpflicht)",
+              "title": "Topic"
+            },
+            "description": "Legal topic (e.g., Vertragsrecht, Haftpflicht)"
+          },
+          {
+            "name": "exclude_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated decision IDs to exclude",
+              "title": "Exclude Ids"
+            },
+            "description": "Comma-separated decision IDs to exclude"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quota/usage": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Aggregate quota usage (admin-gated)",
+        "description": "Returns 7-day call counts per endpoint, top IPs, and recent quota-exceeded alerts. Requires the ADMIN_TOKEN env var to be set on the server and passed as the X-Admin-Token header on the request.",
+        "operationId": "api_quota_usage_quota_usage_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "description": "Days to summarize",
+              "default": 7,
+              "title": "Days"
+            },
+            "description": "Days to summarize"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Create Stripe Customer Portal session",
+        "description": "Returns a URL where the user can manage their subscription, cancel, or update payment.",
+        "operationId": "api_billing_portal_billing_portal_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "License key",
+              "title": "Key"
+            },
+            "description": "License key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Create Stripe Checkout session",
+        "description": "Returns a Stripe Checkout URL for Pro subscription (CHF 5/month).",
+        "operationId": "api_billing_checkout_billing_checkout_post",
+        "parameters": [
+          {
+            "name": "success_url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Redirect after payment",
+              "default": "https://word.opencaselaw.ch/pro-success.html",
+              "title": "Success Url"
+            },
+            "description": "Redirect after payment"
+          },
+          {
+            "name": "cancel_url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Redirect on cancel",
+              "default": "https://word.opencaselaw.ch/",
+              "title": "Cancel Url"
+            },
+            "description": "Redirect on cancel"
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Stripe checkout locale (de, fr, it, en)",
+              "default": "",
+              "title": "Locale"
+            },
+            "description": "Stripe checkout locale (de, fr, it, en)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/webhook": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Stripe webhook handler",
+        "description": "Handles Stripe subscription events. Do not call directly.",
+        "operationId": "api_billing_webhook_billing_webhook_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/validate": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Validate a Pro license key",
+        "description": "Check if a license key is valid and active.",
+        "operationId": "api_billing_validate_billing_validate_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "License key (ocl_pro_...)",
+              "title": "Key"
+            },
+            "description": "License key (ocl_pro_...)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/license-for-session": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Get license key for a completed checkout session",
+        "description": "After Stripe Checkout completes, retrieve the license key using the session ID.",
+        "operationId": "api_billing_license_for_session_billing_license_for_session_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Stripe Checkout session ID (cs_...)",
+              "title": "Session Id"
+            },
+            "description": "Stripe Checkout session ID (cs_...)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/verify": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Pro reference verification",
+        "description": "Server-side reference verification for Pro subscribers. Fetches the case brief and calls Claude to verify the citation.",
+        "operationId": "api_billing_verify_billing_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/strengthen": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Pro paragraph Verify-and-Strengthen",
+        "description": "For a single legal paragraph: verifies cited decisions, finds leading cases not cited (ranked by citation-graph centrality), pulls scholarly commentary excerpts, and computes an argument-strength signal. Paragraph-only — multi-paragraph would dilute per-suggestion ranking. Daily cap shared with /verify (25/day per license).",
+        "operationId": "api_billing_strengthen_billing_strengthen_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrengthenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/reflect": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Pro literary-reflection on the legal issue",
+        "description": "Whole-document scope. The Word add-in scans the current draft, runs js/redact.js to strip PII, and sends the redacted text here. The server: (1) refuses any payload with structurally-identifiable PII; (2) validates the license + daily cap; (3) asks Claude Sonnet to identify the central legal issue and draw ONE literary parallel (Shakespeare / Dürrenmatt / Frisch / Goethe / Kafka / etc.) that mirrors the same human dilemma. Returns a 200-400 word reflective markdown summary plus one question for the lawyer to bring back to the case. Reflective tool — explicitly NOT legal advice. Daily cap shared with /verify and /strengthen (25/day per license).",
+        "operationId": "api_billing_reflect_billing_reflect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReflectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/find-support": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Find decisions supporting a legal statement",
+        "description": "AI parses the legal claim, searches for relevant decisions, and scores how well each supports the statement. Pro feature.",
+        "operationId": "api_billing_find_support_billing_find_support_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindSupportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/admin": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Pro subscriber admin stats (requires dev token)",
+        "operationId": "api_billing_admin_billing_admin_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Dev dashboard token",
+              "title": "Token"
+            },
+            "description": "Dev dashboard token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FindSupportRequest": {
+        "properties": {
+          "license_key": {
+            "type": "string",
+            "title": "License Key"
+          },
+          "statement": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Statement"
+          },
+          "lang": {
+            "type": "string",
+            "title": "Lang",
+            "default": "de"
+          }
+        },
+        "type": "object",
+        "required": [
+          "license_key",
+          "statement"
+        ],
+        "title": "FindSupportRequest",
+        "description": "Request body for finding supporting decisions."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MockDecisionRequest": {
+        "properties": {
+          "facts": {
+            "type": "string",
+            "title": "Facts"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string",
+            "nullable": true
+          },
+          "deciding_court": {
+            "title": "Deciding Court",
+            "type": "string",
+            "nullable": true
+          },
+          "preferred_language": {
+            "title": "Preferred Language",
+            "type": "string",
+            "nullable": true
+          },
+          "statute_references": {
+            "title": "Statute References",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "clarifications": {
+            "title": "Clarifications",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "fedlex_urls": {
+            "title": "Fedlex Urls",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 8
+          }
+        },
+        "type": "object",
+        "required": [
+          "facts"
+        ],
+        "title": "MockDecisionRequest",
+        "description": "Request body for the mock decision endpoint."
+      },
+      "ReflectRequest": {
+        "properties": {
+          "license_key": {
+            "type": "string",
+            "title": "License Key"
+          },
+          "redacted_text": {
+            "type": "string",
+            "maxLength": 60000,
+            "title": "Redacted Text"
+          },
+          "lang": {
+            "type": "string",
+            "title": "Lang",
+            "default": "de"
+          },
+          "client_redactor_version": {
+            "title": "Client Redactor Version",
+            "type": "string",
+            "nullable": true
+          },
+          "client_redactor_summary": {
+            "title": "Client Redactor Summary",
+            "additionalProperties": true,
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "license_key",
+          "redacted_text"
+        ],
+        "title": "ReflectRequest",
+        "description": "Request body for the Pro \"Reflect\" feature.\n\nWhole-document scope: the lawyer points the add-in at their full\ndraft (motion, brief, memo, opinion) and gets back a brief\nliterary-philosophical mirror of the core legal issue. The Word\nadd-in's client-side redactor (>=v3) MUST run before sending —\nthe server-side guard refuses any payload whose structural-PII\nscan comes back non-empty.\n\nThe redacted whole-document budget is intentionally larger than\nthe per-paragraph Strengthen/Verify budgets: the Reflect prompt\nneeds enough context to identify the central issue, but is still\nbounded so a 60-page contract doesn't get sent verbatim."
+      },
+      "StrengthenRequest": {
+        "properties": {
+          "license_key": {
+            "type": "string",
+            "title": "License Key"
+          },
+          "redacted_text": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Redacted Text"
+          },
+          "lang": {
+            "type": "string",
+            "title": "Lang",
+            "default": "de"
+          },
+          "client_redactor_version": {
+            "title": "Client Redactor Version",
+            "type": "string",
+            "nullable": true
+          },
+          "client_redactor_summary": {
+            "title": "Client Redactor Summary",
+            "additionalProperties": true,
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "license_key",
+          "redacted_text"
+        ],
+        "title": "StrengthenRequest",
+        "description": "Request body for Pro paragraph Verify-and-Strengthen.\n\nThe Word add-in (>=v3 redactor) sends ``redacted_text``. Always\nredacted client-side; server-side redaction guard re-runs to enforce\nthe contract for any non-Word caller. Paragraph-only scoping —\nmulti-paragraph review would dilute the per-suggestion ranking;\nlawyers run Strengthen 3-5 times per document, not once on the\nwhole thing."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input",
+            "type": "object"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerifyRequest": {
+        "properties": {
+          "license_key": {
+            "type": "string",
+            "title": "License Key"
+          },
+          "redacted_text": {
+            "title": "Redacted Text",
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
+          },
+          "selected_text": {
+            "title": "Selected Text",
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true
+          },
+          "case_ref": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Case Ref"
+          },
+          "lang": {
+            "type": "string",
+            "title": "Lang",
+            "default": "de"
+          },
+          "client_redactor_version": {
+            "title": "Client Redactor Version",
+            "type": "string",
+            "nullable": true
+          },
+          "client_redactor_summary": {
+            "title": "Client Redactor Summary",
+            "additionalProperties": true,
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "license_key",
+          "case_ref"
+        ],
+        "title": "VerifyRequest",
+        "description": "Request body for Pro reference verification.\n\nThe Word add-in (>=v3 redactor) sends ``redacted_text``. Older\nclients sent ``selected_text`` — both are accepted during the\ntransition window. The server-side redaction guard runs against\nwhichever field was supplied so a missed redaction is caught\neither way; the field name is just a documentation hint to\nAppSource reviewers / security auditors that the contract is\n\"this text is already redacted client-side\"."
+      },
+      "_AttestBody": {
+        "properties": {
+          "redacted_text": {
+            "title": "Redacted Text",
+            "type": "string",
+            "nullable": true
+          },
+          "draft_text": {
+            "title": "Draft Text",
+            "type": "string",
+            "nullable": true
+          },
+          "audit_grounding": {
+            "type": "boolean",
+            "title": "Audit Grounding",
+            "default": false
+          },
+          "audit_quotes": {
+            "type": "boolean",
+            "title": "Audit Quotes",
+            "default": false
+          },
+          "client_redactor_version": {
+            "title": "Client Redactor Version",
+            "type": "string",
+            "nullable": true
+          },
+          "client_redactor_summary": {
+            "title": "Client Redactor Summary",
+            "additionalProperties": true,
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "title": "_AttestBody",
+        "description": "Pro /attest body. The Word add-in (>=v3 redactor) sends\n``redacted_text``. Older clients sent ``draft_text``; both are\naccepted for a transition window. The server-side redaction guard\nruns against whichever field was supplied, so a missed redaction\nis caught either way."
+      },
+      "_VerifyClaimBody": {
+        "properties": {
+          "claim": {
+            "type": "string",
+            "title": "Claim"
+          },
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "pinpoint": {
+            "title": "Pinpoint",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "claim",
+          "decision_id"
+        ],
+        "title": "_VerifyClaimBody"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://mcp.opencaselaw.ch/api",
+      "description": "OpenCaseLaw public REST API"
+    },
+    {
+      "url": "/api",
+      "description": "Relative — for self-hosted or reverse-proxied deployments"
+    }
+  ]
+}

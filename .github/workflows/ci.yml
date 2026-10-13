@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      live_api:
+        description: Run read-only public API smoke tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.20"
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv run --frozen ruff format --check .
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen pytest
+      - run: uv build --out-dir dist
+      - name: Verify installed wheel outside the source checkout
+        working-directory: ${{ runner.temp }}
+        env:
+          WHEEL_DIR: ${{ github.workspace }}/dist
+        run: |
+          uv run --isolated --no-project --python ${{ matrix.python }} --exclude-newer '7 days' --with "$WHEEL_DIR"/*.whl python -c 'from opencaselaw import OpenCaseLawClient, OpenCaseLawAPIError; from importlib.resources import files; assert files("opencaselaw").joinpath("py.typed").is_file()'
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
+  live-api:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_api
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.20"
+          python-version: "3.13"
+      - run: uv sync --locked
+      - run: uv run --frozen pytest --live-api tests/opencaselaw/test_live_api.py

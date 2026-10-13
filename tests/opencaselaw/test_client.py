@@ -136,12 +136,12 @@ def test_get_decision_quotes_path_segment_and_parses_result() -> None:
 
     client = _client_with_handler(httpx.MockTransport(handler))
 
-    decision = client.get_decision("4A_747/2012", full_text=False)
+    decision = client.get_decision("BGE 140 III 86", full_text=False)
 
     assert isinstance(decision, Decision)
     assert decision.docket_number == "4A_747/2012"
-    assert seen_path == "/api/decisions/4A_747/2012"
-    assert seen_raw_path == b"/api/decisions/4A_747%2F2012?full_text=false"
+    assert seen_path == "/api/decisions/BGE 140 III 86"
+    assert seen_raw_path == b"/api/decisions/BGE%20140%20III%2086?full_text=false"
 
 
 def test_get_law_and_cite_parse_typed_models() -> None:

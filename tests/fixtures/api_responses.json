@@ -1,0 +1,24 @@
+{
+  "source": "https://mcp.opencaselaw.ch/api",
+  "checked_on": "2026-10-13",
+  "note": "Selected public fields from live responses; decision text and unrelated fields omitted.",
+  "citation_invalid_pinpoint": {
+    "exists": true,
+    "decision_id": "bge_BGE_140_III_86",
+    "citation_string_de": "BGE 140 III 86",
+    "pinpoint": "2.3",
+    "pinpoint_status": "invalid",
+    "pinpoint_valid": false,
+    "pinpoint_note": "E. 2.3 does not exist in this decision. The citation_string_* fields above are the UNPINPOINTED citation — do not append this pinpoint to them. Pick one of valid_pinpoints, or call find_relevant_erwaegung with the claim to locate the right Erwägung."
+  },
+  "cantonal_law_error": {
+    "error": "No cantonal law found for ZH with abbreviation 'StG'. Try search_laws or search_legislation."
+  },
+  "lookup_hit": {
+    "query": "BGE 140 III 86",
+    "is_case_number": true,
+    "exact": true,
+    "total": 1,
+    "results": [{"decision_id": "bge_BGE_140_III_86"}]
+  }
+}

@@ -1,7 +1,7 @@
 {
   "source": "https://mcp.opencaselaw.ch/api/openapi.json",
-  "checked_on": "2026-09-27",
-  "sha256": "93f69d4aa317dfe3402464bec42f0a93d4b3d08e3ea262359b7f7d750bdba5ce",
+  "checked_on": "2026-10-13",
+  "sha256": "b61fb1a5f016e3b4f52e43b9ac31d81ec1909bc70d57ab6f7f5cfbe6abccf275",
   "operations": [
     {
       "path": "/lookup",
@@ -1577,5 +1577,6 @@
         }
       ]
     }
-  ]
+  ],
+  "schema_file": "application_openapi.json"
 }

@@ -89,6 +89,9 @@ def test_all_documented_get_parameters_reach_transport(operation: dict) -> None:
             serialized = str(value)
         else:
             value = "reference/with space" if parameter["in"] == "path" else name + " value"
+            if operation["path"] == "/decisions/{decision_id}" and name == "decision_id":
+                # Slash references now use exact lookup; that two-request contract has its own test.
+                value = "BGE 140 III 86"
             serialized = value
         arguments[name] = value
         if parameter["in"] == "query":

@@ -43,15 +43,21 @@ class OpenCaseLawConfig(BaseModel):
 DEFAULT_CONFIG = OpenCaseLawConfig()
 
 
-def load_config(config_path: Path | str | None = None) -> OpenCaseLawConfig:
+def load_config(
+    config_path: Path | str | None = None, *, auto_discover: bool = True
+) -> OpenCaseLawConfig:
     """Load runtime settings from YAML, optionally under ``opencaselaw``.
 
-    Missing files and empty documents use package defaults.
+    Automatic discovery reads only the ``opencaselaw`` section of config.yaml,
+    ignoring unrelated application settings. Explicit paths also accept flat
+    settings. Missing files and empty documents use package defaults.
 
     Raises:
         ValueError: The document or configuration values are invalid.
         OSError: The file exists but cannot be read.
     """
+    if config_path is None and not auto_discover:
+        return DEFAULT_CONFIG
     path = Path(config_path) if config_path is not None else Path("config.yaml")
     if not path.exists():
         return DEFAULT_CONFIG
@@ -66,7 +72,11 @@ def load_config(config_path: Path | str | None = None) -> OpenCaseLawConfig:
     if raw_config is None:
         return DEFAULT_CONFIG
     if not isinstance(raw_config, dict):
+        if config_path is None:
+            return DEFAULT_CONFIG
         raise ValueError("Config file must contain a mapping")
+    if config_path is None and "opencaselaw" not in raw_config:
+        return DEFAULT_CONFIG
     section = raw_config.get("opencaselaw", raw_config)
     if not isinstance(section, dict):
         raise ValueError("The 'opencaselaw' config section must be a mapping")

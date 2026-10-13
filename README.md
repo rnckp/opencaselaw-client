@@ -45,11 +45,13 @@ with OpenCaseLawClient() as client:
     # Build a canonical citation
     citation = client.cite("BGE 140 III 86", pinpoint="2.3")
     print(citation.citation_string_de)
+    if citation.pinpoint_valid is not True:
+        print(citation.pinpoint_note, citation.valid_pinpoints)
 ```
 
 ## API Reference
 
-The [compatibility reference](docs/api-compatibility.md) lists wrapper routes and parameters against the checked-in contract dated 2026-09-27, with verification limits. It does not establish current service availability or complete API coverage.
+The [compatibility reference](docs/api-compatibility.md) lists all 51 research operations against the vendored schemas checked on 2026-10-13, with verification limits. Representative live checks passed; they do not establish availability of every endpoint or exhaustive corpus coverage.
 
 The examples below assume an open `client` inside a `with OpenCaseLawClient() as client:` block, as in Quick Start. They make live requests; example IDs and references are illustrative and may not resolve.
 
@@ -79,6 +81,8 @@ decision = client.get_decision("bger_4A_747_2012", full_text=True)
 `search_decisions()` returns a `DecisionSearchResult` with `DecisionSummary` items. `get_decision()` returns a `Decision`. Search accepts both `query` and `q` and forwards supplied values; the server decides precedence. Read `total_is_lower_bound`, `degraded`, and `note` before interpreting the result. Page only when `has_more` is true and `next_offset` is present; the requested `limit` may differ from the returned count. A finished relevance search does not prove corpus completeness. Absent continuation/uncertainty metadata stays `None`. If `total` or `limit` is omitted, the model defaults it to the number of returned records; that fallback is not a corpus count.
 
 Supplying `decision_type` raises `ValueError` locally; express that concept in `query`, or use `court`/`chamber`. `find_relevant_erwaegung()` sends `top_k`; the old `max_paragraphs` Python argument remains an alias.
+
+Slash-containing docket references such as `4A_747/2012` are resolved through exact lookup before fetching the canonical ID. Ambiguous, missing, or partial results raise `ValueError`; the client does not choose an arbitrary hit.
 
 ### Docket Lookup and Tool Discovery
 
@@ -118,6 +122,8 @@ appeal_chain = client.get_appeal_chain("bger_4A_747_2012")
 leading = client.find_leading_cases(query="Mietrecht Kündigung", court="bger", limit=10)
 trends = client.analyze_trends(query="Datenschutz", court="bger")
 ```
+
+`Citation.exists` reports whether the reference resolved. For a requested passage, also inspect `pinpoint_valid`, `pinpoint_status`, `pinpoint_note`, and `valid_pinpoints`. An invalid passage returns an unpinpointed citation; do not append the rejected passage number. The sample `2.3` pinpoint above is invalid for this BGE on the checked deployment.
 
 Audit and claim verification endpoints:
 
@@ -252,7 +258,7 @@ Path("decision.ris").write_text(ris, encoding="utf-8")
 
 ### Configuration
 
-Runtime defaults are loaded from `config.yaml` in the current working directory, or from the constructor's `config_path`. Missing files and empty YAML documents use package defaults. The settings can be top-level or nested under `opencaselaw`; unknown setting keys are rejected. Constructor arguments such as `base_url`, `timeout`, and `rate_limit_delay` override configured defaults. Every wrapper with a `limit` argument uses `default_limit` when it is omitted, including lookup, citations, and mock decisions.
+The checked-in `config.yaml` provides the package defaults shown below. Automatic loading reads only its `opencaselaw` section in the current working directory and ignores unrelated application settings. Set `auto_discover_config=False` to disable automatic loading. An explicit `config_path` still loads a file, accepting either flat settings or an `opencaselaw` section. Missing files and empty YAML documents use package defaults; unknown keys within client settings are rejected. Constructor arguments such as `base_url`, `timeout`, and `rate_limit_delay` override configured defaults. Every wrapper with a `limit` argument uses `default_limit` when it is omitted, including lookup, citations, and mock decisions.
 
 ```yaml
 opencaselaw:
@@ -299,7 +305,7 @@ from opencaselaw import (
 )
 ```
 
-The client uses frozen Pydantic models for stable high-use shapes and preserves the original payload, including unknown fields, in each model's `raw` attribute. Invalid known fields raise `pydantic.ValidationError` (a `ValueError` subclass), including malformed list entries; records are never silently dropped. `raw` and nested collections remain mutable. Models support keyword construction and `from_json()`; use `model_dump()` instead of dataclass utilities. Other JSON wrappers return dictionaries, except `list_courts()`, which also accepts arrays, and `list_court_models()`, which returns a list of `Court` models. Only `call_tool()` translates `_is_error: true` into a tool exception; HTTP-success error payloads from other routes are retained, including in model `raw` fields.
+The client uses frozen Pydantic models for stable high-use shapes and preserves the original payload, including unknown fields, in each model's `raw` attribute. Invalid known fields raise `pydantic.ValidationError` (a `ValueError` subclass), including malformed list entries; records are never silently dropped. `raw` and nested collections remain mutable. Models support keyword construction and `from_json()`; use `model_dump()` instead of dataclass utilities. Other JSON wrappers return dictionaries, except `list_courts()`, which also accepts arrays, and `list_court_models()`, which returns a list of `Court` models. JSON wrappers raise `OpenCaseLawAPIError` for a non-empty top-level `error` in an HTTP-success response. `_is_error: true` raises its subclass `OpenCaseLawToolError`. Both retain `.payload` without including server text in the exception message. A completed citation miss (`exists: false`) or empty search remains a successful result.
 
 ## Scope
 
@@ -341,7 +347,15 @@ uv run pytest -v
 uv build
 ```
 
-Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Package metadata requires Python 3.13 or newer; there is no CI matrix verifying the supported range. Tests use local mock transports and do not call the public API; the demo notebook does. Weekly dependency updates are configured in `.github/dependabot.yml`, but no CI workflows or pre-commit hooks are configured. See [PLAN.md](PLAN.md) for follow-up work.
+Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Package metadata requires Python 3.13 or newer. CI checks Python 3.13 and 3.14, formatting, lint, tests, package builds, and installed-wheel imports. GitHub dependency review rejects high/critical vulnerabilities introduced by pull-request dependency changes; it is not a full installed-environment audit. Weekly Dependabot updates cover Python dependencies and pinned actions. No pre-commit hooks are configured.
+
+The default test suite is offline. Vendored schemas and selected public response fixtures make request, POST-body, response, and error contracts reproducible. To explicitly run the read-only public API checks:
+
+```bash
+uv run pytest --live-api tests/opencaselaw/test_live_api.py
+```
+
+These checks contact the service and can fail because of availability or upstream changes. CI runs them only when manually requested, not on every pull request.
 
 Client instances are intended for sequential use. The delay is per client, not a shared per-IP limiter. HTTP errors and transport errors propagate to callers; retries are not automatic. Configuration rejects non-finite timing values, non-positive limits, and base URLs containing credentials, queries, or fragments.
 

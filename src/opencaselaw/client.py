@@ -9,7 +9,7 @@ import httpx
 from pydantic import ConfigDict, TypeAdapter
 
 from .config import OpenCaseLawConfig, PositiveTimeout, load_config
-from .models import Citation, Court, Decision, DecisionSearchResult, Law
+from .models import Citation, Court, Decision, DecisionSearchResult, DecisionSummary, Law
 
 _TIMEOUT_ADAPTER = TypeAdapter(PositiveTimeout, config=ConfigDict(hide_input_in_errors=True))
 _COURTS_ADAPTER = TypeAdapter(list[Court], config=ConfigDict(hide_input_in_errors=True))
@@ -26,13 +26,25 @@ def _params(**values: Any) -> dict[str, Any]:
     return {key: value for key, value in values.items() if value is not None}
 
 
-class OpenCaseLawToolError(RuntimeError):
-    """A research tool reported failure inside an HTTP 200 response."""
+class OpenCaseLawAPIError(RuntimeError):
+    """The API reported an application failure inside a successful HTTP response."""
 
     def __init__(self, payload: dict[str, Any]) -> None:
         """Keep the server payload available for explicit inspection."""
-        super().__init__("OpenCaseLaw research tool reported an error")
+        # Server messages may contain submitted text; keep them out of exception strings.
+        super().__init__("OpenCaseLaw API reported an error; inspect payload for details")
         self.payload = payload
+
+
+class OpenCaseLawToolError(OpenCaseLawAPIError):
+    """A research tool reported failure inside an HTTP 200 response."""
+
+
+def _raise_application_error(data: dict[str, Any]) -> None:
+    if data.get("_is_error") is True:
+        raise OpenCaseLawToolError(data)
+    if data.get("error"):
+        raise OpenCaseLawAPIError(data)
 
 
 class OpenCaseLawClient:
@@ -45,9 +57,11 @@ class OpenCaseLawClient:
         rate_limit_delay: float | None = None,
         config_path: Path | str | None = None,
         transport: httpx.BaseTransport | None = None,
+        *,
+        auto_discover_config: bool = True,
     ) -> None:
         """Initialize the client."""
-        config = load_config(config_path)
+        config = load_config(config_path, auto_discover=auto_discover_config)
         effective_config = OpenCaseLawConfig.model_validate(
             config.model_dump()
             | _params(base_url=base_url, timeout=timeout, rate_limit_delay=rate_limit_delay)
@@ -116,6 +130,7 @@ class OpenCaseLawClient:
         data = self._request("GET", path, params=params, timeout=timeout).json()
         if not isinstance(data, dict):
             raise ValueError(f"Expected JSON object from {path}")
+        _raise_application_error(data)
         return data
 
     def _post_json(
@@ -135,6 +150,7 @@ class OpenCaseLawClient:
         ).json()
         if not isinstance(data, dict):
             raise ValueError(f"Expected JSON object from {path}")
+        _raise_application_error(data)
         return data
 
     def _get_bytes(
@@ -205,7 +221,26 @@ class OpenCaseLawClient:
         return DecisionSearchResult.from_json(data)
 
     def get_decision(self, decision_id: str, full_text: bool = True) -> Decision:
-        """Fetch a single decision by ID, docket number, or BGE reference."""
+        """Fetch a decision; resolve slash-containing references with exact lookup.
+
+        Raises:
+            ValueError: A slash reference cannot resolve to one complete, routable hit.
+        """
+        if "/" in decision_id:
+            lookup = self.lookup(q=decision_id, exact=True, limit=25)
+            hits = lookup.get("results")
+            if (
+                (lookup.get("partial") is not None and lookup.get("partial") is not False)
+                or (lookup.get("exact") is not None and lookup.get("exact") is not True)
+                or type(lookup.get("total")) is not int
+                or lookup.get("total") != 1
+                or not isinstance(hits, list)
+                or len(hits) != 1
+            ):
+                raise ValueError("Could not resolve reference to one unambiguous decision")
+            decision_id = DecisionSummary.from_json(hits[0]).decision_id
+            if "/" in decision_id:
+                raise ValueError("Could not resolve reference to a routable decision ID")
         data = self._get_json(
             f"/decisions/{_quote_segment(decision_id)}",
             params=_params(full_text=full_text),
@@ -217,6 +252,8 @@ class OpenCaseLawClient:
         data = self._request("GET", "/courts").json()
         if not isinstance(data, (dict, list)):
             raise ValueError("Expected JSON object or array from /courts")
+        if isinstance(data, dict):
+            _raise_application_error(data)
         return data
 
     def list_court_models(self) -> list[Court]:
@@ -762,14 +799,11 @@ class OpenCaseLawClient:
             OpenCaseLawToolError: The server marks the HTTP 200 payload as an error.
             httpx.HTTPStatusError: The HTTP request fails (including 404 or 422).
         """
-        data = self._post_json(
+        return self._post_json(
             f"/tool/{_quote_segment(name)}",
             json_data={} if arguments is None else arguments,
             timeout=request_timeout,
         )
-        if data.get("_is_error") is True:
-            raise OpenCaseLawToolError(data)
-        return data
 
     def get_cantonal_law(
         self,

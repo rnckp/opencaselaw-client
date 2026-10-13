@@ -1,6 +1,6 @@
 """Independent Python client for the public OpenCaseLaw API."""
 
-from .client import OpenCaseLawClient, OpenCaseLawToolError
+from .client import OpenCaseLawAPIError, OpenCaseLawClient, OpenCaseLawToolError
 from .config import DEFAULT_CONFIG, OpenCaseLawConfig, load_config
 from .models import (
     Citation,
@@ -23,6 +23,7 @@ __all__ = [
     "DecisionSummary",
     "Law",
     "LawArticle",
+    "OpenCaseLawAPIError",
     "OpenCaseLawClient",
     "OpenCaseLawConfig",
     "OpenCaseLawToolError",
