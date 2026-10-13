@@ -51,7 +51,7 @@ with OpenCaseLawClient() as client:
 
 ## API Reference
 
-The [compatibility reference](docs/api-compatibility.md) lists all 51 research operations against the vendored schemas checked on 2026-10-13, with verification limits. Representative live checks passed; they do not establish availability of every endpoint or exhaustive corpus coverage.
+The [compatibility reference](docs/api-compatibility.md) lists the 51 operations in the saved public request contract plus two schema-discovery routes. The snapshots are dated 2026-10-13; they do not establish current endpoint availability or exhaustive corpus coverage.
 
 The examples below assume an open `client` inside a `with OpenCaseLawClient() as client:` block, as in Quick Start. They make live requests; example IDs and references are illustrative and may not resolve.
 
@@ -123,7 +123,7 @@ leading = client.find_leading_cases(query="Mietrecht Kündigung", court="bger", 
 trends = client.analyze_trends(query="Datenschutz", court="bger")
 ```
 
-`Citation.exists` reports whether the reference resolved. For a requested passage, also inspect `pinpoint_valid`, `pinpoint_status`, `pinpoint_note`, and `valid_pinpoints`. An invalid passage returns an unpinpointed citation; do not append the rejected passage number. The sample `2.3` pinpoint above is invalid for this BGE on the checked deployment.
+`Citation.exists` reports whether the reference resolved. For a requested passage, also inspect `pinpoint_valid`, `pinpoint_status`, `pinpoint_note`, and `valid_pinpoints`. An invalid passage returns an unpinpointed citation; do not append the rejected passage number. The saved response fixture records the sample `2.3` pinpoint above as invalid for this BGE.
 
 Audit and claim verification endpoints:
 
@@ -160,12 +160,16 @@ relevant = client.find_relevant_erwaegung(
 ### Statutes
 
 ```python
-cantonal_law = client.get_cantonal_law("StG", "ZH", article="12")
-print(cantonal_law.raw)  # Inspect error/candidates if the abbreviation does not resolve.
+from opencaselaw import OpenCaseLawAPIError
+
+try:
+    cantonal_law = client.get_cantonal_law("StG", "ZH", article="12")
+except OpenCaseLawAPIError as error:
+    print(error.payload)  # Inspect the failure and any suggested candidates.
 xml = client.get_law_xml("OR", article="41", language="de")
 ```
 
-`get_law()` returns a `Law`; `get_law_xml()` requests `format=xml` and returns text. HTTP failures, including unavailable XML (404), propagate. A successful HTTP response can still contain an application error: inspect `law.raw` for `error`, `note`, and `candidates`, especially for ambiguous cantonal abbreviations. Article text can be missing or empty in tables of contents and historical editions; inspect `text_status` and use `law.articles or []` when iterating. `get_commentary()` accepts `canton`.
+`get_law()` and `get_cantonal_law()` return a `Law` on success. A non-empty top-level `error`, even in an HTTP 200 response, raises `OpenCaseLawAPIError`; inspect its `.payload` for details. `get_law_xml()` requests `format=xml` and returns text. HTTP failures, including unavailable XML (404), propagate. Article text can be missing or empty in tables of contents and historical editions; inspect `text_status` and use `law.articles or []` when iterating. `get_commentary()` accepts `canton`.
 
 ```python
 law = client.get_law("OR", article="41", language="de")
