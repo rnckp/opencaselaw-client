@@ -20,7 +20,7 @@ def test_jupyter_is_not_a_runtime_dependency() -> None:
 def test_ci_covers_supported_versions_and_pins_every_action() -> None:
     root = Path(__file__).resolve().parents[1]
     workflow = yaml.load((root / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    assert (root / ".python-version").read_text().strip() == "3.13"
+    assert (root / ".python-version").read_text().strip() == "3.12"
     quality_steps = workflow["jobs"]["quality"]["steps"]
     setup = next(step["with"] for step in quality_steps if "setup-uv@" in step.get("uses", ""))
     assert setup["python-version-file"] == ".python-version"
@@ -28,7 +28,11 @@ def test_ci_covers_supported_versions_and_pins_every_action() -> None:
     setup = next(
         step["with"] for step in compatibility_steps if "setup-uv@" in step.get("uses", "")
     )
-    assert setup["python-version"] == "3.14"
+    assert set(workflow["jobs"]["compatibility"]["strategy"]["matrix"]["python"]) == {
+        "3.13",
+        "3.14",
+    }
+    assert setup["python-version"] == "${{ matrix.python }}"
     for steps in (quality_steps, compatibility_steps):
         assert any(step.get("run") == "uv run --no-sync pytest -q" for step in steps)
 
