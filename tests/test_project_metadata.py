@@ -20,15 +20,31 @@ def test_jupyter_is_not_a_runtime_dependency() -> None:
 def test_ci_covers_supported_versions_and_pins_every_action() -> None:
     root = Path(__file__).resolve().parents[1]
     workflow = yaml.load((root / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    assert {"3.13", "3.14"} <= set(workflow["jobs"]["quality"]["strategy"]["matrix"]["python"])
-    assert workflow["permissions"] == {"contents": "read"}
-    for job in workflow["jobs"].values():
-        for step in job["steps"]:
-            if "uses" in step:
-                assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", step["uses"])
-    review = workflow["jobs"]["dependency-review"]
-    assert review["if"] == "github.event_name == 'pull_request'"
-    assert review["steps"][-1]["with"]["fail-on-severity"] == "high"
+    assert (root / ".python-version").read_text().strip() == "3.13"
+    quality_steps = workflow["jobs"]["quality"]["steps"]
+    setup = next(step["with"] for step in quality_steps if "setup-uv@" in step.get("uses", ""))
+    assert setup["python-version-file"] == ".python-version"
+    compatibility_steps = workflow["jobs"]["compatibility"]["steps"]
+    setup = next(
+        step["with"] for step in compatibility_steps if "setup-uv@" in step.get("uses", "")
+    )
+    assert setup["python-version"] == "3.14"
+    for steps in (quality_steps, compatibility_steps):
+        assert any(step.get("run") == "uv run --no-sync pytest -q" for step in steps)
+
+    audit = yaml.load((root / ".github/workflows/security.yml").read_text(), Loader=yaml.BaseLoader)
+    assert "schedule" in audit["on"]
+    assert {"pyproject.toml", "uv.lock"} <= set(audit["on"]["pull_request"]["paths"])
+    assert audit["jobs"]["dependencies"]["steps"][-1]["run"] == (
+        "uv audit --locked --preview-features audit-command"
+    )
+    for path in (root / ".github/workflows").glob("*.yml"):
+        config = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
+        assert config["permissions"] == {"contents": "read"}
+        for job in config["jobs"].values():
+            for step in job["steps"]:
+                if "uses" in step:
+                    assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", step["uses"])
 
 
 def test_checkout_config_contains_explicit_package_defaults() -> None:

@@ -345,13 +345,35 @@ This independent client accesses public OpenCaseLaw endpoints.
 
 ```bash
 uv sync
+uv run pre-commit install
 uv run ruff format .
 uv run ruff check .
 uv run pytest -v
-uv build
+uv run pre-commit run --all-files
+uv build --force-pep517
 ```
 
-Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`. Package metadata requires Python 3.13 or newer. CI checks Python 3.13 and 3.14, formatting, lint, tests, package builds, and installed-wheel imports. GitHub dependency review rejects high/critical vulnerabilities introduced by pull-request dependency changes; it is not a full installed-environment audit. Weekly Dependabot updates cover Python dependencies and pinned actions. No pre-commit hooks are configured.
+Source lives in `src/opencaselaw`, with package tests in `tests/opencaselaw`. `uv sync` installs the package in editable mode; no `PYTHONPATH` override is needed. The `uv_build` backend produces a wheel and source distribution in `dist/`; `--force-pep517` uses the declared backend even with a newer uv CLI. Package metadata requires Python 3.13 or newer.
+
+Local hooks run locked Ruff lint with safe fixes and formatting on staged Python
+files and notebooks, plus YAML/JSON, conflict, private-key, whitespace, and 1 MB
+added-file checks. Gitleaks scans staged changes for credentials. The first hook
+run downloads reusable environments; subsequent commits use them. Run `uv sync`
+first, since Ruff hooks use `--no-sync`. Review and stage fixes before committing again.
+
+CI runs these hooks, offline tests, distribution builds, and an installed-wheel
+import/resource check on Python 3.13. A separate Python 3.14 job tests compatibility
+without repeating lint or builds. Jobs use cached uv environments, read-only
+permissions, ten-minute timeouts, and cancellation of superseded runs. Gitleaks is
+skipped in CI because its hook scans staged changes; enable GitHub secret scanning
+and push protection for remote commits.
+
+A separate dependency audit runs for dependency changes, weekly, or manually via
+`uv audit --locked --preview-features audit-command`. It replaces the PR-only
+dependency review with a full locked runtime and development dependency scan.
+Dependabot monitors uv, GitHub Actions, and external hooks weekly, groups routine
+updates, and applies a seven-day cooldown. Require `Quality` and `Python 3.14` in
+branch protection after verifying hosted CI; do not require the path-filtered audit.
 
 The default test suite is offline. Vendored schemas and selected public response fixtures make request, POST-body, response, and error contracts reproducible. To explicitly run the read-only public API checks:
 

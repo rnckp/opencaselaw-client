@@ -1,9 +1,9 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
       live_api:
@@ -14,48 +14,57 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
+    name: Quality
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.13", "3.14"]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: "0.12.20"
-          python-version: ${{ matrix.python }}
+          version: "0.13.0"
+          python-version-file: .python-version
+          enable-cache: true
       - run: uv sync --locked
-      - run: uv run --frozen ruff format --check .
-      - run: uv run --frozen ruff check .
-      - run: uv run --frozen pytest
-      - run: uv build --out-dir dist
+      - name: Check all tracked files
+        # Gitleaks scans staged changes locally. GitHub secret scanning and push
+        # protection cover remote commits; an empty CI index cannot do that.
+        env:
+          SKIP: gitleaks
+        run: uv run --no-sync pre-commit run --all-files
+      - name: Run offline tests
+        run: uv run --no-sync pytest -q
+      - name: Build distributions
+        run: uv build --force-pep517
       - name: Verify installed wheel outside the source checkout
         working-directory: ${{ runner.temp }}
         env:
           WHEEL_DIR: ${{ github.workspace }}/dist
         run: |
-          uv run --isolated --no-project --python ${{ matrix.python }} --exclude-newer '7 days' --with "$WHEEL_DIR"/*.whl python -c 'from opencaselaw import OpenCaseLawClient, OpenCaseLawAPIError; from importlib.resources import files; assert files("opencaselaw").joinpath("py.typed").is_file()'
+          uv run --isolated --no-project --python 3.13 --exclude-newer '7 days' --with "$WHEEL_DIR"/*.whl python -c 'from opencaselaw import OpenCaseLawClient, OpenCaseLawAPIError; from importlib.resources import files; assert files("opencaselaw").joinpath("py.typed").is_file()'
 
-  dependency-review:
-    if: github.event_name == 'pull_request'
+  compatibility:
+    name: Python 3.14
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          fail-on-severity: high
+          version: "0.13.0"
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run --no-sync pytest -q
 
   live-api:
     if: github.event_name == 'workflow_dispatch' && inputs.live_api
@@ -67,7 +76,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: "0.12.20"
-          python-version: "3.13"
+          version: "0.13.0"
+          python-version-file: .python-version
+          enable-cache: true
       - run: uv sync --locked
-      - run: uv run --frozen pytest --live-api tests/opencaselaw/test_live_api.py
+      - run: uv run --no-sync pytest --live-api tests/opencaselaw/test_live_api.py
