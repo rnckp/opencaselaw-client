@@ -1,4 +1,7 @@
-# Notes
+# Implementation notes
+
+Durable decisions, constraints, and historical observations. Public usage is in
+the [client guide](docs/client-guide.md); open work is in [PLAN.md](PLAN.md).
 
 - Required CI covers Python 3.12–3.14. A local Python 3.15 smoke test passed on macOS arm64 on 2026-10-14, but the locked `pydantic-core` needed a source build. Keep 3.15 outside required CI until eligible wheels make setup fast and reproducible; a local pass does not establish Linux compatibility.
 

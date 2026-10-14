@@ -2,6 +2,16 @@
 
 Instructions for AI agents working on Python projects managed with `uv`. Apply only sections relevant to the task; preserve established project choices unless a migration is requested.
 
+This repository is a synchronous Python client library, with its package in
+`src/opencaselaw/` and Python support defined in `pyproject.toml`. The platform,
+web application, database, and agentic-AI sections below are conditional guidance,
+not descriptions of implemented components. See [README.md](README.md) for the
+public overview, [CONTRIBUTING.md](CONTRIBUTING.md) for development, and
+[PLAN.md](PLAN.md) for open tasks. Application logging, health checks, database
+persistence, containers, and agent telemetry apply only if those application
+components are introduced. This library propagates errors to callers and does
+not configure application logging.
+
 ## Priority
 
 When instructions conflict, follow:

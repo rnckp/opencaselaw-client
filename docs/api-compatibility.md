@@ -1,10 +1,28 @@
-# Public API compatibility reference
+# OpenCaseLaw API compatibility notes
+
+These notes describe the requests and response handling implemented by this independent client. They
+are not an official service specification. Start with the [README](../README.md) for installation
+and the [client guide](client-guide.md) for Python examples and configuration.
 
 ## Evidence and verification limits
 
-The vendored [application schema](../tests/fixtures/application_openapi.json) and [typed research schema](../tests/fixtures/research_openapi.json) are dated 2026-10-13. [schema_manifest.json](../tests/fixtures/schema_manifest.json) records their source URLs, date, and reproducible SHA-256 hashes of the stored files. The compact [request contract](../tests/fixtures/public_api_contract.json) contains 51 public operations, all present in the saved application schema; its other 11 operations are quota/billing/admin routes outside this package's scope. The research schema describes seven routes, rather than the entire public request contract.
+The vendored [application schema](../tests/fixtures/application_openapi.json) and [typed research
+schema](../tests/fixtures/research_openapi.json) are dated 2026-10-13.
+[schema_manifest.json](../tests/fixtures/schema_manifest.json) records their source URLs, date, and
+reproducible SHA-256 hashes of the stored files. The compact [request
+contract](../tests/fixtures/public_api_contract.json) contains 51 public operations, all present in
+the saved application schema; its other 11 operations are quota/billing/admin routes outside this
+package's scope. The research schema describes seven routes, rather than the entire public request
+contract.
 
-Local contract tests check POST fields against the application body schemas using mock transport; they do not execute POST requests against the service. Five opt-in live tests cover schema drift, populated core responses, slash-reference resolution, invalid pinpoint metadata, and explicit cantonal-law failure. No live-test run report is stored in the repository, so prior pass status cannot be independently verified here. These bounded checks do not establish current availability of every endpoint or exhaustive corpus coverage. The [selected response fixture](../tests/fixtures/api_responses.json) records an invalid citation pinpoint, a cantonal-law error, and a lookup hit; response coverage remains partial.
+Local contract tests check POST fields against the application body schemas using mock transport;
+they do not execute POST requests against the service. Five opt-in live tests cover schema drift,
+populated core responses, slash-reference resolution, invalid pinpoint metadata, and explicit
+cantonal-law failure. No live-test run report is stored in the repository, so prior pass status
+cannot be independently verified here. These bounded checks do not establish current availability of
+every endpoint or exhaustive corpus coverage. The [selected response
+fixture](../tests/fixtures/api_responses.json) records an invalid citation pinpoint, a cantonal-law
+error, and a lookup hit; response coverage remains partial.
 
 ## Client compatibility behavior
 
@@ -19,7 +37,11 @@ Local contract tests check POST fields against the application body schemas usin
 
 ## Endpoint inventory
 
-All paths below are relative to the default base URL, `https://mcp.opencaselaw.ch/api`. Path parameters appear in braces. Numeric bounds below match the saved request contract; this client generally leaves endpoint-specific validation to the server. The client uses its configured `default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each server default.
+All paths below are relative to the default base URL, `https://mcp.opencaselaw.ch/api`. Path
+parameters appear in braces. Numeric bounds below match the saved request contract; this client
+generally leaves endpoint-specific validation to the server. The client uses its configured
+`default_limit` (10 unless changed) when a wrapper limit is omitted, rather than reproducing each
+server default.
 
 | Method | Path | Query parameters | Numeric bounds |
 | --- | --- | --- | --- |
@@ -77,11 +99,15 @@ All paths below are relative to the default base URL, `https://mcp.opencaselaw.c
 | GET | `/structure/{decision_id}` | `paragraph_excerpt_chars` | `paragraph_excerpt_chars`: 50–5000 |
 | GET | `/exam-question` | `topic`, `exclude_ids` | — |
 
-`get_openapi()` selects the application or research schema route. These two discovery routes are implemented and tested separately but are not included in the saved contract.
+`get_openapi()` selects the application or research schema route. These two discovery routes are
+implemented and tested separately but are not included in the saved contract.
 
 ### JSON request bodies
 
-These fields are sent by the wrappers; required fields below are required Python arguments. The POST contract tests compare body field coverage, required fields, top-level types, and transport serialization with the vendored application schema; they do not validate all nested values or server-side constraints.
+These fields are sent by the wrappers; required fields below are required Python arguments. The POST
+contract tests compare body field coverage, required fields, top-level types, and transport
+serialization with the vendored application schema; they do not validate all nested values or
+server-side constraints.
 
 - `/mock-decision`: `facts` (required), `question`, `deciding_court`, `preferred_language`, `statute_references`, `clarifications`, `fedlex_urls`, `limit`.
 - `/attest`: `redacted_text`, `draft_text`, `audit_grounding`, `audit_quotes`, `client_redactor_version`, `client_redactor_summary`.
@@ -90,6 +116,15 @@ These fields are sent by the wrappers; required fields below are required Python
 
 ## Scope and contract tests
 
-This package provides synchronous HTTP wrappers. It has no CLI entry point, local packs, offline research checks, or evidence-bundle implementation. Billing, quota, license-key, and admin wrappers are outside its scope. `call_tool()` accepts a tool name and arguments without local catalog/schema validation; available tools depend on the service.
+This package provides synchronous HTTP wrappers. It has no CLI entry point, local packs, offline
+research checks, or evidence-bundle implementation. Billing, quota, license-key, and admin wrappers
+are outside its scope. `call_tool()` accepts a tool name and arguments without local catalog/schema
+validation; available tools depend on the service.
 
-`test_api_contract.py` compares GET requests with the saved contract, and `test_schema_snapshots.py` checks the vendored schema hashes, POST bodies, selected response fixtures, and required typed research fields. Client tests cover XML, schema retrieval, error handling, and ambiguity rejection with local transports. Run `uv run pytest --live-api tests/opencaselaw/test_live_api.py` to check deployment drift and representative live behavior explicitly. Default tests never contact the service; manual CI dispatch can enable the live suite. These tests do not validate every response field or execute POST research workflows.
+`test_api_contract.py` compares GET requests with the saved contract, and `test_schema_snapshots.py`
+checks the vendored schema hashes, POST bodies, selected response fixtures, and required typed
+research fields. Client tests cover XML, schema retrieval, error handling, and ambiguity rejection
+with local transports. Run `uv run pytest --live-api tests/opencaselaw/test_live_api.py` to check
+deployment drift and representative live behavior explicitly. Default tests never contact the
+service; manual CI dispatch can enable the live suite. These tests do not validate every response
+field or execute POST research workflows.
