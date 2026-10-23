@@ -21,7 +21,7 @@ results = client.search_decisions(
     chamber="I",  # optional chamber substring
     limit=20,
     offset=0,
-    sort="date_desc",  # "relevance", "date_desc", "date_asc"
+    sort="date_desc",  # "relevance", "date_desc", "date_asc", "published_desc"
     fields="compact",  # "full" or "compact"
     include_pinpoint=False,  # skip extra passage lookups
     marked_for_publication=None,  # True: BGer rulings marked for the BGE collection
@@ -42,6 +42,12 @@ defaults it to the number of returned records; that fallback is not a corpus cou
 Supplying `decision_type` raises `ValueError` locally; express that concept in `query`, or use
 `court`/`chamber`. `find_relevant_erwaegung()` sends `top_k`; the old `max_paragraphs` Python
 argument remains an alias.
+
+For newly published decisions, use `published_from="2026-10-01"`, optionally
+`published_to="2026-10-23"`, and `sort="published_desc"`. These filter publication dates;
+`date_from` and `date_to` filter decision dates. `published_to` requires `published_from`.
+The server can restrict publication queries to decisions decided within an 18-month window.
+Inspect `publication_window_decided_from`; pass an earlier `date_from` to widen that window.
 
 Slash-containing docket references such as `4A_747/2012` are resolved through exact lookup before
 fetching the canonical ID. Ambiguous, missing, or partial results raise `ValueError`; the client
@@ -198,9 +204,14 @@ doctrine = client.get_doctrine("Art. 41 OR Schadenersatz")
 materials = client.search_materialien(query="Haftung", law_code="OR", limit=10)
 article_materials = client.get_materialien("OR", article="41")
 purpose = client.get_article_purpose("220", "41", language="de", max_paragraphs=8)
-botschaft = client.search_botschaft("Schadenersatz", language="de", limit=20)
+botschaft = client.search_botschaft("Schadenersatz", language="de", doc_type="botschaft", limit=20)
 history = client.get_article_history("220", "41", language="de")
 ```
+
+`search_botschaft()` accepts `doc_type` for Fedlex and consultation document types; leave it unset
+to search all types. `get_materialien()` accepts the Fedlex subset to filter `botschaft_documents`.
+`search_materialien()` accepts and echoes `doc_type` but does not filter its curated digest.
+Inspect each response's `doc_type_filter` and notes; the current schema lists accepted values.
 
 ## Research helpers
 

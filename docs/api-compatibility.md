@@ -7,7 +7,7 @@ and the [client guide](client-guide.md) for Python examples and configuration.
 ## Evidence and verification limits
 
 The vendored [application schema](../tests/fixtures/application_openapi.json) and [typed research
-schema](../tests/fixtures/research_openapi.json) are dated 2026-10-13.
+schema](../tests/fixtures/research_openapi.json) were fetched on 2026-10-23.
 [schema_manifest.json](../tests/fixtures/schema_manifest.json) records their source URLs, date, and
 reproducible SHA-256 hashes of the stored files. The compact [request
 contract](../tests/fixtures/public_api_contract.json) contains 51 public operations, all present in
@@ -16,10 +16,12 @@ package's scope. The research schema describes seven routes, rather than the ent
 contract.
 
 Local contract tests check POST fields against the application body schemas using mock transport;
-they do not execute POST requests against the service. Five opt-in live tests cover schema drift,
-populated core responses, slash-reference resolution, invalid pinpoint metadata, and explicit
-cantonal-law failure. No live-test run report is stored in the repository, so prior pass status
-cannot be independently verified here. These bounded checks do not establish current availability of
+they do not execute POST requests against the service. Opt-in live tests cover schema drift,
+populated core responses, slash-reference resolution, invalid pinpoint metadata, explicit
+cantonal-law failure, publication and document-type filters, and representative public read routes.
+On 2026-10-23, all 21 live cases passed against the public deployment; the offline suite passed
+221 tests (live cases skipped). All 51 saved public operations remain in the deployed schema.
+These bounded checks do not establish current availability of
 every endpoint or exhaustive corpus coverage. The [selected response
 fixture](../tests/fixtures/api_responses.json) records an invalid citation pinpoint, a cantonal-law
 error, and a lookup hit; response coverage remains partial.
@@ -30,6 +32,8 @@ error, and a lookup hit; response coverage remains partial.
 - `decision_type` is rejected locally. There is no `legal_area` argument.
 - Relevant-Erwägung requests send `top_k`; `max_paragraphs` remains a Python alias. Conflicting values raise `ValueError`.
 - Search models retain continuation, lower-bound, degraded-ranking, and query-condensation metadata. Missing optional metadata stays `None`. The client neither paginates automatically nor establishes exhaustive coverage.
+- Publication filters use `published_from` and optional `published_to` (which requires `published_from`); `sort="published_desc"` sorts newest publications first. Inspect `publication_window_decided_from` for a server-imposed decision-date window; an earlier `date_from` widens it.
+- `doc_type` filters `search_botschaft()` and the `botschaft_documents` returned by `get_materialien()`. On `search_materialien()` it is accepted and echoed but does not filter the curated digest.
 - `Law.articles` can be absent or null, and article text can be absent, null, or empty. Inspect `text_status` and iterate over `articles or []`.
 - JSON responses with a non-empty top-level `error` raise `OpenCaseLawAPIError`, retaining `.payload`. `_is_error: true` raises its subclass `OpenCaseLawToolError`. Completed citation misses (`exists: false`) and empty searches remain valid results.
 - Slash-containing references passed to `get_decision()` use exact lookup before fetching a canonical ID. Missing, ambiguous, partial, malformed, or unroutable matches are rejected.
@@ -50,7 +54,7 @@ server default.
 | GET | `/lookup` | `q`, `query`, `limit`, `exact` | `limit`: 1–25 |
 | POST | `/tool/{name}` | — | — |
 | GET | `/tool` | — | — |
-| GET | `/decisions` | `query`, `q`, `court`, `canton`, `language`, `date_from`, `date_to`, `chamber`, `marked_for_publication`, `limit`, `offset`, `sort`, `fields`, `include_pinpoint` | `limit`: 1–2000; `offset`: 0–unbounded |
+| GET | `/decisions` | `query`, `q`, `court`, `canton`, `language`, `date_from`, `date_to`, `published_from`, `published_to`, `chamber`, `marked_for_publication`, `limit`, `offset`, `sort`, `fields`, `include_pinpoint` | `limit`: 1–2000; `offset`: 0–unbounded |
 | GET | `/decisions/{decision_id}` | `full_text` | — |
 | GET | `/courts` | — | — |
 | GET | `/integrity/{decision_id}` | — | — |
@@ -75,8 +79,8 @@ server default.
 | GET | `/scholarship/cited-by-decision` | `decision_id`, `limit` | `limit`: 1–100 |
 | GET | `/scholarship-fulltext` | `pub_id` | — |
 | GET | `/scholarship/{pub_id}` | — | — |
-| GET | `/materialien/{law_code}` | `article` | — |
-| GET | `/materialien` | `query`, `q`, `law_code`, `limit` | `limit`: 1–50 |
+| GET | `/materialien/{law_code}` | `article`, `doc_type` | — |
+| GET | `/materialien` | `query`, `q`, `law_code`, `limit`, `doc_type` | `limit`: 1–50 |
 | GET | `/legislation/search` | `query`, `q`, `canton`, `language`, `limit`, `active_only`, `search_in_content`, `fetch_top_n_texts` | `limit`: 1–60; `fetch_top_n_texts`: 0–10 |
 | GET | `/legislation/changes` | `canton`, `language` | — |
 | GET | `/legislation/{lexfind_id}` | `systematic_number`, `canton`, `language`, `include_versions` | — |
@@ -93,7 +97,7 @@ server default.
 | GET | `/erwaegung/{decision_id}/{e_number}` | — | — |
 | GET | `/relevant-erwaegung/{decision_id}` | `claim`, `top_k` | `top_k`: 1–10 |
 | GET | `/article-purpose/{sr_number}/{article}` | `language`, `max_paragraphs` | `max_paragraphs`: 1–20 |
-| GET | `/search-botschaft` | `query`, `q`, `language`, `year_min`, `year_max`, `limit` | `limit`: 1–50 |
+| GET | `/search-botschaft` | `query`, `q`, `language`, `year_min`, `year_max`, `doc_type`, `limit` | `limit`: 1–50 |
 | GET | `/article-history/{sr_number}/{article}` | `language`, `leading_cases_limit` | `leading_cases_limit`: 1–15 |
 | GET | `/regeste/{decision_id}` | — | — |
 | GET | `/structure/{decision_id}` | `paragraph_excerpt_chars` | `paragraph_excerpt_chars`: 50–5000 |

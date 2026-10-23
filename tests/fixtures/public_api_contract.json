@@ -1,7 +1,7 @@
 {
   "source": "https://mcp.opencaselaw.ch/api/openapi.json",
-  "checked_on": "2026-10-13",
-  "sha256": "b61fb1a5f016e3b4f52e43b9ac31d81ec1909bc70d57ab6f7f5cfbe6abccf275",
+  "checked_on": "2026-10-23",
+  "sha256": "c8a4bf0c7529c9a4b723ebc18ed1f2d40a59a8da3523e570a92b6bc1aede7e7d",
   "operations": [
     {
       "path": "/lookup",
@@ -163,6 +163,22 @@
         },
         {
           "name": "sort",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "published_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "published_to",
           "in": "query",
           "required": false,
           "schema": {
@@ -984,6 +1000,15 @@
           "schema": {
             "type": "string"
           }
+        },
+        {
+          "name": "doc_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung)$"
+          }
         }
       ]
     },
@@ -1024,6 +1049,15 @@
             "maximum": 50,
             "minimum": 1,
             "default": 10
+          }
+        },
+        {
+          "name": "doc_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung)$"
           }
         }
       ]
@@ -1458,6 +1492,15 @@
           "required": false,
           "schema": {
             "type": "integer"
+          }
+        },
+        {
+          "name": "doc_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung|erlaeuternder_bericht|vernehmlassungsvorlage|ergebnisbericht|stellungnahmen|synoptische_tabelle|vernehmlassung_diverses)$"
           }
         },
         {

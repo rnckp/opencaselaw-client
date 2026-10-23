@@ -12,7 +12,7 @@ pytestmark = pytest.mark.live_api
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def live_client() -> Iterator[OpenCaseLawClient]:
     """Use public defaults, ignoring local configuration and pacing requests."""
     with OpenCaseLawClient(timeout=60, rate_limit_delay=0.25, auto_discover_config=False) as client:
@@ -81,3 +81,56 @@ def test_live_cantonal_failure_is_explicit(live_client: OpenCaseLawClient) -> No
     with pytest.raises(OpenCaseLawAPIError) as error:
         live_client.get_cantonal_law("__opencaselaw_nonexistent_law__", "ZH", article="12")
     assert error.value.payload["error"]
+
+
+def test_live_publication_filters(live_client: OpenCaseLawClient) -> None:
+    result = live_client.search_decisions(
+        court="bger",
+        published_from="2026-01-01",
+        published_to="2026-10-23",
+        sort="published_desc",
+        include_pinpoint=False,
+        limit=2,
+    )
+    assert result.results
+    dates = [decision.publication_date for decision in result.results]
+    assert all(date is not None and "2026-01-01" <= date <= "2026-10-23" for date in dates)
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_live_material_document_types(live_client: OpenCaseLawClient) -> None:
+    search = live_client.search_botschaft(q="Haftung", doc_type="botschaft", limit=1)
+    assert search["doc_type_filter"] == "botschaft"
+    assert search["results"]
+    assert all(hit["doc_type"] == "botschaft" for hit in search["results"])
+    materials = live_client.get_materialien("OR", article="41", doc_type="botschaft")
+    assert materials["doc_type_filter"] == "botschaft"
+    assert all(hit["doc_type"] == "botschaft" for hit in materials["botschaft_documents"])
+    digest = live_client.search_materialien(q="Haftung", doc_type="botschaft", limit=1)
+    assert digest["doc_type_filter"] == "botschaft"
+    assert digest["doc_type_note"]
+
+
+@pytest.mark.parametrize(
+    "method,arguments",
+    [
+        ("get_statistics", {}),
+        ("get_scraper_health", {}),
+        ("list_tools", {}),
+        ("get_citations", {"decision_id": "bge_BGE_140_III_86", "limit": 1}),
+        ("get_appeal_chain", {"decision_id": "bge_BGE_140_III_86"}),
+        ("get_structure", {"decision_id": "bge_BGE_140_III_86"}),
+        ("get_regeste", {"decision_id": "bge_BGE_140_III_86"}),
+        ("search_laws", {"q": "Haftung", "limit": 1}),
+        ("search_legislation", {"q": "Obligationenrecht", "limit": 1}),
+        ("search_commentaries", {"q": "Haftung", "limit": 1}),
+        ("search_scholarship", {"q": "Mietrecht", "limit": 1}),
+        ("list_scholarship_sources", {}),
+        ("get_scholarship_licenses", {}),
+        ("get_scholarship_citation_stats", {}),
+    ],
+)
+def test_live_public_read_endpoints(
+    live_client: OpenCaseLawClient, method: str, arguments: dict
+) -> None:
+    assert getattr(live_client, method)(**arguments)

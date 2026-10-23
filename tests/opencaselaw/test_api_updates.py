@@ -231,6 +231,7 @@ def test_search_metadata_preserves_uncertainty_and_server_continuation() -> None
             "next_offset": 1,
             "degraded": True,
             "note": "Time budget reached",
+            "publication_window_decided_from": "2025-04-23",
         }
     )
     assert result.total_is_lower_bound is True
@@ -239,9 +240,11 @@ def test_search_metadata_preserves_uncertainty_and_server_continuation() -> None
     assert result.next_offset == 1
     assert result.degraded is True
     assert result.note == "Time budget reached"
+    assert result.publication_window_decided_from == "2025-04-23"
     legacy = DecisionSearchResult.from_json({"results": []})
     assert legacy.total_is_lower_bound is None
     assert legacy.has_more is None
+    assert legacy.publication_window_decided_from is None
 
 
 def test_law_accepts_documented_table_of_contents_and_empty_text() -> None:

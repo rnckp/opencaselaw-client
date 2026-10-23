@@ -189,6 +189,8 @@ class OpenCaseLawClient:
         q: str | None = None,
         marked_for_publication: bool | None = None,
         include_pinpoint: bool | None = None,
+        published_from: str | None = None,
+        published_to: str | None = None,
         request_timeout: float | None = None,
     ) -> DecisionSearchResult:
         """Search decisions; follow server continuation and lower-bound metadata.
@@ -210,6 +212,8 @@ class OpenCaseLawClient:
                 language=language,
                 date_from=date_from,
                 date_to=date_to,
+                published_from=published_from,
+                published_to=published_to,
                 chamber=chamber,
                 limit=self._limit(limit),
                 offset=offset,
@@ -463,22 +467,27 @@ class OpenCaseLawClient:
         limit: int | None = None,
         *,
         q: str | None = None,
+        doc_type: str | None = None,
     ) -> dict[str, Any]:
-        """Search preparatory materials."""
+        """Search curated preparatory materials; doc_type is echoed but does not filter."""
         return self._get_json(
             "/materialien",
-            params=_params(query=query, q=q, law_code=law_code, limit=self._limit(limit)),
+            params=_params(
+                query=query, q=q, law_code=law_code, limit=self._limit(limit), doc_type=doc_type
+            ),
         )
 
     def get_materialien(
         self,
         law_code: str,
         article: str | None = None,
+        *,
+        doc_type: str | None = None,
     ) -> dict[str, Any]:
         """Get preparatory materials for a law article."""
         return self._get_json(
             f"/materialien/{_quote_segment(law_code)}",
-            params=_params(article=article),
+            params=_params(article=article, doc_type=doc_type),
         )
 
     def search_legislation(
@@ -708,6 +717,7 @@ class OpenCaseLawClient:
         year_min: int | None = None,
         year_max: int | None = None,
         q: str | None = None,
+        doc_type: str | None = None,
     ) -> dict[str, Any]:
         """Search the verbatim Botschaft corpus."""
         return self._get_json(
@@ -718,6 +728,7 @@ class OpenCaseLawClient:
                 language=language,
                 year_min=year_min,
                 year_max=year_max,
+                doc_type=doc_type,
                 limit=self._limit(limit),
             ),
         )

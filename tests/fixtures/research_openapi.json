@@ -147,10 +147,32 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Sort: relevance (default), date_desc, date_asc",
+              "description": "Sort: relevance (default), date_desc, date_asc (decision_date), published_desc (newest publication_date first)",
               "title": "Sort"
             },
-            "description": "Sort: relevance (default), date_desc, date_asc"
+            "description": "Sort: relevance (default), date_desc, date_asc (decision_date), published_desc (newest publication_date first)"
+          },
+          {
+            "name": "published_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Only decisions PUBLISHED on or after this date (YYYY-MM-DD; publication_date, not decision_date). Use for 'newly published' alerts. May be limited to decisions decided up to 18 months earlier (always without a court filter); publication_window_decided_from then names the limit, and an earlier date_from widens it. Decisions without a publication_date never match.",
+              "title": "Published From"
+            },
+            "description": "Only decisions PUBLISHED on or after this date (YYYY-MM-DD; publication_date, not decision_date). Use for 'newly published' alerts. May be limited to decisions decided up to 18 months earlier (always without a court filter); publication_window_decided_from then names the limit, and an earlier date_from widens it. Decisions without a publication_date never match."
+          },
+          {
+            "name": "published_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Only decisions published on or before this date (YYYY-MM-DD, inclusive). Requires published_from.",
+              "title": "Published To"
+            },
+            "description": "Only decisions published on or before this date (YYYY-MM-DD, inclusive). Requires published_from."
           },
           {
             "name": "fields",
@@ -857,6 +879,13 @@
             "description": "True when the search hit its time budget and skipped ranking strategies; the page is a degraded ranking, not the best matches.",
             "title": "Degraded",
             "type": "boolean",
+            "nullable": true
+          },
+          "publication_window_decided_from": {
+            "default": null,
+            "description": "Set on a publication-date query (published_from / sort=published_desc): the earliest decision_date it considered. Decisions decided earlier are not in the result; pass an earlier date_from to include them.",
+            "title": "Publication Window Decided From",
+            "type": "string",
             "nullable": true
           },
           "decisions": {

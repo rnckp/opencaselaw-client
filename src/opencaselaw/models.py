@@ -89,6 +89,7 @@ class DecisionSearchResult(_ResponseModel):
     condensed_terms: list[str] | None = None
     note: str | None = None
     degraded: bool | None = Field(default=None, strict=True)
+    publication_window_decided_from: str | None = None
 
     @model_validator(mode="before")
     @classmethod

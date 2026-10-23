@@ -286,10 +286,32 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Sort: relevance (default), date_desc, date_asc",
+              "description": "Sort: relevance (default), date_desc, date_asc (decision_date), published_desc (newest publication_date first)",
               "title": "Sort"
             },
-            "description": "Sort: relevance (default), date_desc, date_asc"
+            "description": "Sort: relevance (default), date_desc, date_asc (decision_date), published_desc (newest publication_date first)"
+          },
+          {
+            "name": "published_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Only decisions PUBLISHED on or after this date (YYYY-MM-DD; publication_date, not decision_date). Use for 'newly published' alerts. May be limited to decisions decided up to 18 months earlier (always without a court filter); publication_window_decided_from then names the limit, and an earlier date_from widens it. Decisions without a publication_date never match.",
+              "title": "Published From"
+            },
+            "description": "Only decisions PUBLISHED on or after this date (YYYY-MM-DD; publication_date, not decision_date). Use for 'newly published' alerts. May be limited to decisions decided up to 18 months earlier (always without a court filter); publication_window_decided_from then names the limit, and an earlier date_from widens it. Decisions without a publication_date never match."
+          },
+          {
+            "name": "published_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Only decisions published on or before this date (YYYY-MM-DD, inclusive). Requires published_from.",
+              "title": "Published To"
+            },
+            "description": "Only decisions published on or before this date (YYYY-MM-DD, inclusive). Requires published_from."
           },
           {
             "name": "fields",
@@ -1937,6 +1959,18 @@
               "title": "Article"
             },
             "description": "Article number (e.g., '1', '8')"
+          },
+          {
+            "name": "doc_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung)$",
+              "description": "Optional Fedlex document type for `botschaft_documents` (botschaft, bericht_bundesrat, stellungnahme_bundesrat, bericht_kommission, erlassentwurf, vorentwurf_erlass, vernehmlassung_eroeffnung). Default: all types.",
+              "title": "Doc Type"
+            },
+            "description": "Optional Fedlex document type for `botschaft_documents` (botschaft, bericht_bundesrat, stellungnahme_bundesrat, bericht_kommission, erlassentwurf, vorentwurf_erlass, vernehmlassung_eroeffnung). Default: all types."
           }
         ],
         "responses": {
@@ -2016,6 +2050,18 @@
               "title": "Limit"
             },
             "description": "Max results"
+          },
+          {
+            "name": "doc_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung)$",
+              "description": "Accepted for symmetry with /api/search-botschaft; a no-op on this curated digest (echoed back as doc_type_filter).",
+              "title": "Doc Type"
+            },
+            "description": "Accepted for symmetry with /api/search-botschaft; a no-op on this curated digest (echoed back as doc_type_filter)."
           }
         ],
         "responses": {
@@ -2703,7 +2749,7 @@
           "Exports"
         ],
         "summary": "Atom feed of newest decisions for a court",
-        "description": "Atom 1.0 feed of the 50 most recent decisions from a given court. Subscribe in any feed reader (NetNewsWire, Inoreader, Feedbin, etc.) to get a daily digest of newly published decisions.",
+        "description": "Atom 1.0 feed of the 50 most recently published decisions from a given court, newest publication date first (decision date where the court publishes none). Subscribe in any feed reader (NetNewsWire, Inoreader, Feedbin, etc.) to get a daily digest of newly published decisions.",
         "operationId": "api_atom_court_atom__court__xml_get",
         "parameters": [
           {
@@ -3000,6 +3046,18 @@
               "title": "Year Max"
             },
             "description": "Latest source-Botschaft publication year (inclusive)"
+          },
+          {
+            "name": "doc_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(botschaft|bericht_bundesrat|stellungnahme_bundesrat|bericht_kommission|erlassentwurf|vorentwurf_erlass|vernehmlassung_eroeffnung|erlaeuternder_bericht|vernehmlassungsvorlage|ergebnisbericht|stellungnahmen|synoptische_tabelle|vernehmlassung_diverses)$",
+              "description": "Optional Fedlex document type: botschaft, bericht_bundesrat, stellungnahme_bundesrat, bericht_kommission, erlassentwurf, vorentwurf_erlass, vernehmlassung_eroeffnung, or a Vernehmlassung document: erlaeuternder_bericht, vernehmlassungsvorlage, ergebnisbericht, stellungnahmen, synoptische_tabelle, vernehmlassung_diverses. Leave unset for all; every hit carries doc_type + doc_type_label (Fedlex's DE/FR/IT name).",
+              "title": "Doc Type"
+            },
+            "description": "Optional Fedlex document type: botschaft, bericht_bundesrat, stellungnahme_bundesrat, bericht_kommission, erlassentwurf, vorentwurf_erlass, vernehmlassung_eroeffnung, or a Vernehmlassung document: erlaeuternder_bericht, vernehmlassungsvorlage, ergebnisbericht, stellungnahmen, synoptische_tabelle, vernehmlassung_diverses. Leave unset for all; every hit carries doc_type + doc_type_label (Fedlex's DE/FR/IT name)."
           },
           {
             "name": "limit",
