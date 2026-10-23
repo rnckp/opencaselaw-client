@@ -85,10 +85,11 @@ See the [API compatibility notes](docs/api-compatibility.md) for evidence and ve
 Run the local checks from the repository root:
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
+make check
 ```
+
+The [Makefile](Makefile) also provides `sync`, `format`, `lint`, `test`, `test-live`, and `build`.
+Running `make` defaults to `check`; `test-live` explicitly contacts the public API.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, hooks, builds, CI, and optional checks. Agent
 guidance is in [AGENTS.md](AGENTS.md).
