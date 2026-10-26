@@ -15,3 +15,7 @@ the [client guide](docs/client-guide.md); open work is in [PLAN.md](PLAN.md).
 ## eMudhra/emSign patch, 2026-10-26
 
 The affected certifi lock and environment now require at least 2026.10.19. Newer secure versions were preserved. Keep the existing seven-day cooldown. Remove only the incident package exemptions after certifi artifacts age seven days (2026-10-27 after 03:24:17 CET). Retain the security minimums. See the workspace SECURITY-PATCH-2026-10-26.md report for verification and scope.
+
+## Dependency audit fixes, 2026-10-26
+
+The failed audit identified vulnerable development dependencies pulled in by pre-commit. Require filelock >=4.2.1 and virtualenv >=21.14.10; the lock selects 4.2.4 and 21.14.13. Only virtualenv needs a new cooldown exemption. Remove that exemption after its locked artifacts age seven days (2026-10-29 after 21:10:17 CET), retaining the security minimums.
