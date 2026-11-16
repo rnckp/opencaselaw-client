@@ -23,7 +23,8 @@ def test_ci_covers_supported_versions_and_pins_every_action() -> None:
     assert (root / ".python-version").read_text().strip() == "3.12"
     quality_steps = workflow["jobs"]["quality"]["steps"]
     setup = next(step["with"] for step in quality_steps if "setup-uv@" in step.get("uses", ""))
-    assert setup["python-version-file"] == ".python-version"
+    assert "python-version-file" not in setup
+    assert "python-version" not in setup
     compatibility_steps = workflow["jobs"]["compatibility"]["steps"]
     setup = next(
         step["with"] for step in compatibility_steps if "setup-uv@" in step.get("uses", "")

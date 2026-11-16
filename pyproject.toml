@@ -33,6 +33,9 @@ dev = [
 ]
 
 [tool.uv]
+constraint-dependencies = ["tornado>=6.6.1"]
+# Security fix (GHSA-5cjw-f85j-cv6r); retain exemption while the 7-day cutoff excludes 6.6.1.
+exclude-newer-package = { tornado = false }
 exclude-newer = "7 days"
 
 [tool.pytest.ini_options]
